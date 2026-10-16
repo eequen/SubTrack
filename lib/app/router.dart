@@ -12,11 +12,19 @@ import 'package:subtrack/features/semesters/semesters_page.dart';
 import 'package:subtrack/features/subjects/subjects_page.dart';
 
 /// Routes from AGENTS.md section 14.
-/// Auth redirect (signed-out -> /login) arrives with AuthService in the next
-/// task; until then the app starts at /login.
-GoRouter buildRouter() {
+///
+/// Signed-out users are redirected to `/login`; signed-in users visiting
+/// `/login` go to `/semesters`. The router is rebuilt by [routerProvider]
+/// whenever the auth state changes, so no refreshListenable is needed.
+GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: initialLocation ?? '/login',
+    redirect: (context, state) {
+      final atLogin = state.matchedLocation == '/login';
+      if (!isSignedIn && !atLogin) return '/login';
+      if (isSignedIn && atLogin) return '/semesters';
+      return null;
+    },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
