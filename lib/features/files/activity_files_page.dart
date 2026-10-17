@@ -1,19 +1,15 @@
-import 'dart:typed_data';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path/path.dart' as p;
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
 
 /// Screen 6 from AGENTS.md section 14: files of one activity.
@@ -38,53 +34,16 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
   }
 
   Future<void> _addFile() async {
-    final source = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.folder_open_outlined),
-              title: const Text('From storage'),
-              onTap: () => Navigator.of(context).pop('storage'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Camera'),
-              onTap: () => Navigator.of(context).pop('camera'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.close),
-              title: const Text('Cancel'),
-              onTap: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
-
     try {
-      Uint8List? bytes;
-      String name;
-      if (source == 'storage') {
-        final result = await FilePicker.pickFiles();
-        if (result.isEmpty) return;
-        final picked = result.single;
-        bytes = await picked.readAsBytes();
-        name = picked.name;
-      } else {
-        final picked = await ImagePicker().pickImage(
-          source: ImageSource.camera,
-        );
-        if (picked == null) return;
-        bytes = await picked.readAsBytes();
-        name = p.basename(picked.path);
-      }
+      final picked = await ref.read(filePickerProvider)(context);
+      if (picked == null || !mounted) return;
       await ref
           .read(fileRepoProvider)
-          .upload(activityId: _activityId, bytes: bytes, displayName: name);
+          .upload(
+            activityId: _activityId,
+            bytes: picked.bytes,
+            displayName: picked.name,
+          );
     } catch (e) {
       _snack('Could not add file: $e');
     }
@@ -273,15 +232,15 @@ class _FileCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                _CardButton(label: 'Open', onPressed: onOpen),
+                CardButton(label: 'Open', onPressed: onOpen),
                 const SizedBox(width: 8),
-                _CardButton(
+                CardButton(
                   label: 'History',
                   onPressed: () =>
                       context.push('/files/${item.file.id}/history'),
                 ),
                 const SizedBox(width: 8),
-                _CardButton(
+                CardButton(
                   label: 'Commit',
                   onPressed: () =>
                       context.push('/files/${item.file.id}/commit'),
@@ -290,24 +249,6 @@ class _FileCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CardButton extends StatelessWidget {
-  const _CardButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        child: Text(label, style: const TextStyle(fontSize: 13)),
       ),
     );
   }

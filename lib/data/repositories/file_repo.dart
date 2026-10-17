@@ -43,6 +43,24 @@ class FileRepo {
     );
   }
 
+  /// One file with its current commit, for the commit and history screens.
+  Stream<FileListItem?> watchById(int id) {
+    final query = db.select(db.files).join([
+      leftOuterJoin(
+        db.commits,
+        db.commits.id.equalsExp(db.files.currentCommitId),
+      ),
+    ])..where(db.files.id.equals(id));
+    return query.watchSingleOrNull().map(
+      (row) => row == null
+          ? null
+          : FileListItem(
+              file: row.readTable(db.files),
+              currentCommit: row.readTableOrNull(db.commits),
+            ),
+    );
+  }
+
   Future<DbFile?> getById(int id) {
     return (db.select(
       db.files,
