@@ -245,6 +245,64 @@ void main() {
     expect(item.currentCommit!.id, v3Id);
   });
 
+  test('restoring v2 of a 3-version file yields v4 that matches v2', () async {
+    final c = await _container();
+    final semesterId = await _semester(c);
+    final subjectId = await _subject(c, semesterId);
+    final activityId = await _activity(c, subjectId);
+    final files = c.read(fileRepoProvider);
+    final commits = c.read(commitRepoProvider);
+    final store = c.read(blobStoreProvider);
+
+    final fileId = await files.upload(
+      activityId: activityId,
+      bytes: bytesOf('v1 content'),
+      displayName: 'thesis.txt',
+    );
+    for (final (versionNo, message, content) in [
+      (2, 'Second draft', 'v2 content'),
+      (3, 'Third draft', 'v3 content'),
+    ]) {
+      final hash = await store.saveBytes(bytesOf(content));
+      await commits.create(
+        fileId: fileId,
+        versionNo: versionNo,
+        message: message,
+        blobHash: hash,
+        sizeBytes: content.length,
+        mimeType: 'text/plain',
+      );
+    }
+
+    final before = await commits.watchByFile(fileId).first;
+    expect(before.map((h) => h.versionNo), [3, 2, 1]);
+    final v2 = before.firstWhere((h) => h.versionNo == 2);
+
+    await commits.restoreAsNewCommit(fileId: fileId, fromCommitId: v2.id);
+
+    // Done-when (AGENTS.md section 9, Phase 3): 3 versions + restore = 4,
+    // and v4 matches v2.
+    final after = await commits.watchByFile(fileId).first;
+    expect(after, hasLength(4), reason: 'restore adds a version, deletes none');
+    final v4 = after.first;
+    expect(v4.versionNo, 4);
+    expect(v4.message, 'Restored from v2');
+    expect(v4.restoredFromCommitId, v2.id);
+    expect(v4.blobHash, v2.blobHash);
+    expect(v4.sizeBytes, v2.sizeBytes);
+    expect(await store.read(v4.blobHash), await store.read(v2.blobHash));
+
+    // v3, v2, v1 are untouched.
+    expect(
+      [after[1].message, after[2].message, after[3].message],
+      ['Third draft', 'Second draft', 'Initial version'],
+    );
+
+    // current_commit_id points at v4.
+    final item = (await files.watchByActivity(activityId).first).single;
+    expect(item.currentCommit!.id, v4.id);
+  });
+
   test('restore rejects a commit from another file', () async {
     final c = await _container();
     final semesterId = await _semester(c);

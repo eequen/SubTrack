@@ -53,6 +53,27 @@ class StatusChip extends StatelessWidget {
   }
 }
 
+/// Green "Current" pill (mockups 3 and 7) marking the latest version
+/// or the latest semester.
+class CurrentChip extends StatelessWidget {
+  const CurrentChip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.finalBg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        'Current',
+        style: TextStyle(color: AppColors.finalText, fontSize: 12),
+      ),
+    );
+  }
+}
+
 /// Amber deadline pill (mockups 4, 5, 6).
 class DeadlineChip extends StatelessWidget {
   const DeadlineChip({required this.deadline, super.key});

@@ -6,6 +6,7 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/shared/chips.dart';
 
 final _rangeFormat = DateFormat('MMM d');
 final _yearFormat = DateFormat('yyyy');
@@ -109,23 +110,7 @@ class SemestersPage extends ConsumerWidget {
                                     ),
                                   ),
                                 ),
-                                if (index == 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.finalBg,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'Current',
-                                      style: TextStyle(
-                                        color: AppColors.finalText,
-                                      ),
-                                    ),
-                                  ),
+                                if (index == 0) const CurrentChip(),
                               ],
                             ),
                             subtitle: Text(
