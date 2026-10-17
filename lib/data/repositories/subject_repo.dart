@@ -64,6 +64,12 @@ class SubjectRepo {
     );
   }
 
+  Stream<Subject?> watchById(int id) {
+    return (db.select(
+      db.subjects,
+    )..where((s) => s.id.equals(id))).watchSingleOrNull();
+  }
+
   Future<int> create({
     required int semesterId,
     required String name,
