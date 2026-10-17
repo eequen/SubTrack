@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/app.dart';
+import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
-import 'package:subtrack/features/semesters/semester_providers.dart';
 
 Future<AppDatabase> _pumpApp(
   WidgetTester tester, {
