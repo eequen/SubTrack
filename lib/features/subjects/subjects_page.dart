@@ -5,9 +5,11 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
+import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/subjects/subject_dialog.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
+import 'package:subtrack/shared/chips.dart';
 
 /// Screen 4 from AGENTS.md section 14: Subjects.
 class SubjectsPage extends ConsumerWidget {
@@ -58,6 +60,7 @@ class SubjectsPage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              if (selectedId != null) _DueSoonCard(semesterId: selectedId),
               Expanded(
                 child: selectedId == null
                     ? const Center(
@@ -230,6 +233,80 @@ class _SubjectCard extends ConsumerWidget {
           onTap: () => context.push('/subjects/${subject.id}/activities'),
         ),
       ),
+    );
+  }
+}
+
+/// Nearest deadlines this semester (mockup 4); hidden when there are none.
+class _DueSoonCard extends ConsumerWidget {
+  const _DueSoonCard({required this.semesterId});
+
+  final int semesterId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcoming = ref.watch(upcomingProvider(semesterId));
+    return upcoming.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Due soon',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  for (final upcoming in items)
+                    InkWell(
+                      onTap: () =>
+                          context.push('/activities/${upcoming.activity.id}'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    upcoming.activity.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    upcoming.subjectName,
+                                    style: const TextStyle(
+                                      color: AppColors.mutedText,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (upcoming.activity.deadline != null)
+                              DeadlineChip(
+                                deadline: upcoming.activity.deadline!,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
