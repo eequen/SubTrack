@@ -103,6 +103,7 @@ class CloudRepo {
   Future<void> backupNow({
     void Function(CloudBackupProgress progress)? onProgress,
     bool Function()? cancelled,
+    bool includeOlderVersions = false,
   }) async {
     void report(CloudBackupProgress progress) => onProgress?.call(progress);
     bool isCancelled() => cancelled?.call() ?? false;
@@ -115,8 +116,11 @@ class CloudRepo {
     final files = await db.select(db.files).get();
     final commits = await db.select(db.commits).get();
 
-    // 2. Only the latest version's blob goes up (AGENTS.md Phase 5).
-    final latest = await _latestBlobs();
+    // 2. Only the latest version's blob goes up (AGENTS.md Phase 5), or
+    //    every version when the student asked for the full history.
+    final latest = includeOlderVersions
+        ? await _allBlobs()
+        : await _latestBlobs();
     final known = await blobApi.listBlobHashes();
     final fresh = <String, int>{
       for (final entry in latest.entries)
@@ -421,6 +425,19 @@ class CloudRepo {
     }
     return result;
   }
+
+  /// Every commit's blob hash with its size, for the include-older-versions
+  /// option. Identical content collapses into one entry.
+  Future<Map<String, int>> _allBlobs() async {
+    final result = <String, int>{};
+    for (final commit in await db.select(db.commits).get()) {
+      result[commit.blobHash] = commit.sizeBytes;
+    }
+    return result;
+  }
+
+  /// Bytes the account's blobs take in the cloud, for the storage bar.
+  Future<int> cloudUsageBytes() => blobApi.usedBytes();
 
   Future<void> _upsertAll(String table, List<Map<String, dynamic>> rows) async {
     for (var start = 0; start < rows.length; start += 250) {

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -17,6 +18,7 @@ import 'package:subtrack/data/storage/blob_store.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 import 'package:subtrack/features/backup/backup_providers.dart';
+import 'package:subtrack/features/cloud/cloud_providers.dart';
 import 'package:subtrack/features/files/file_pick.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 
@@ -103,7 +105,11 @@ Future<_Setup> _setup(WidgetTester tester) async {
   return setup;
 }
 
-Future<void> _pump(WidgetTester tester, _Setup setup) async {
+Future<void> _pump(
+  WidgetTester tester,
+  _Setup setup, {
+  ConnectivityCheckFn? connectivity,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -122,6 +128,12 @@ Future<void> _pump(WidgetTester tester, _Setup setup) async {
         ),
         backupPickerProvider.overrideWithValue(
           () async => PickedUpload(bytes: setup.zipBytes, name: 'backup.zip'),
+        ),
+        // No Supabase and no real radio in widget tests: the storage bar
+        // reads 0 usage, and connectivity defaults to Wi-Fi.
+        cloudUsageProvider.overrideWith((ref) => 0),
+        connectivityCheckProvider.overrideWithValue(
+          connectivity ?? () async => [ConnectivityResult.wifi],
         ),
         initialLocationProvider.overrideWithValue('/cloud'),
       ],
@@ -156,6 +168,7 @@ void main() {
 
     // Export writes the .zip under the app's backups folder; the share
     // sheet itself is a platform channel and is not asserted here.
+    await tester.ensureVisible(find.text('Export local backup (.zip)'));
     await tester.tap(find.text('Export local backup (.zip)'));
     await _settle(tester);
     final zips = await tester.runAsync(() async {
@@ -168,9 +181,9 @@ void main() {
     });
     expect(zips, isNotEmpty);
 
-    // Let the "Backup exported." snack bar dismiss first: in this short
-    // test viewport it would otherwise float over the Import button and
-    // absorb the tap.
+    // The checkboxes pushed the Import button below the short test
+    // viewport; scroll it into view before tapping it.
+    await tester.ensureVisible(find.text('Import local backup (.zip)'));
     await tester.pump(const Duration(seconds: 5));
     await tester.pump(const Duration(seconds: 1));
 
@@ -187,6 +200,7 @@ void main() {
     );
 
     // Confirming replaces the data: the lost phone is restored.
+    await tester.ensureVisible(find.text('Import local backup (.zip)'));
     await tester.tap(find.text('Import local backup (.zip)'));
     await _settle(tester);
     await tester.tap(find.text('Import'));
@@ -202,6 +216,28 @@ void main() {
 
     // The chosen semester was reset (the backup brings its own ids).
     expect(setup.prefs.getInt('selected_semester:maria@school.edu'), isNull);
+
+    await closeDatabase(tester, setup.db);
+  });
+
+  testWidgets('back up now refuses on mobile data when Wi-Fi only is on', (
+    tester,
+  ) async {
+    final setup = await _setup(tester);
+    await _pump(
+      tester,
+      setup,
+      // Pretend the phone is on mobile data only.
+      connectivity: () async => [ConnectivityResult.mobile],
+    );
+
+    expect(find.text('Back up now'), findsOneWidget);
+    await tester.tap(find.text('Back up now'));
+    await _settle(tester);
+    expect(
+      find.text('Wi-Fi only is on. Connect to Wi-Fi or untick it below.'),
+      findsOneWidget,
+    );
 
     await closeDatabase(tester, setup.db);
   });
