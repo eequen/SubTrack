@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/backup_repo.dart';
@@ -14,8 +16,9 @@ import 'package:subtrack/features/semesters/semester_providers.dart';
 
 /// Screen 10 from AGENTS.md section 14: Cloud backup.
 ///
-/// Phase 5 delivers the manual Back up now and Restore from cloud buttons;
-/// the storage bar and the Wi-Fi-only setting follow.
+/// Phase 5 delivers the manual Back up now and Restore from cloud buttons,
+/// the storage bar, and the backup settings. Backup stays manual: nothing
+/// is uploaded until the student presses the button.
 class CloudPage extends ConsumerStatefulWidget {
   const CloudPage({super.key});
 
@@ -31,7 +34,36 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   bool _cancelRequested = false;
   String? _progressText;
 
+  /// Screen 10 settings; defaults per AGENTS.md (Wi-Fi only on, older
+  /// versions off).
+  bool _wifiOnly = true;
+  bool _includeOlder = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = ref.read(sharedPreferencesProvider);
+    _wifiOnly = prefs.getBool('subtrack_backup_wifi_only') ?? true;
+    _includeOlder = prefs.getBool('subtrack_include_older_versions') ?? false;
+  }
+
   bool get _busy => _backingUp || _restoring;
+
+  String _mb(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
+
+  void _setWifiOnly(bool value) {
+    setState(() => _wifiOnly = value);
+    ref
+        .read(sharedPreferencesProvider)
+        .setBool('subtrack_backup_wifi_only', value);
+  }
+
+  void _setIncludeOlder(bool value) {
+    setState(() => _includeOlder = value);
+    ref
+        .read(sharedPreferencesProvider)
+        .setBool('subtrack_include_older_versions', value);
+  }
 
   void _snack(String message) {
     if (!mounted) return;
@@ -40,8 +72,19 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   }
 
   /// Back up now (AGENTS.md section 9, Phase 5 task 5): manual upload with
-  /// progress and cancel.
+  /// progress and cancel. Honours the Wi-Fi-only setting (constraint 7's
+  /// free plan; screen 10).
   Future<void> _backupNow() async {
+    if (_wifiOnly) {
+      final networks = await ref.read(connectivityCheckProvider)();
+      final onWifi =
+          networks.contains(ConnectivityResult.wifi) ||
+          networks.contains(ConnectivityResult.ethernet);
+      if (!onWifi) {
+        _snack('Wi-Fi only is on. Connect to Wi-Fi or untick it below.');
+        return;
+      }
+    }
     setState(() {
       _backingUp = true;
       _cancelRequested = false;
@@ -67,7 +110,15 @@ class _CloudPageState extends ConsumerState<CloudPage> {
               });
             },
             cancelled: () => _cancelRequested,
+            includeOlderVersions: _includeOlder,
           );
+      await ref
+          .read(sharedPreferencesProvider)
+          .setString(
+            'subtrack_last_cloud_backup',
+            DateTime.now().toUtc().toIso8601String(),
+          );
+      ref.invalidate(cloudUsageProvider);
       _snack('Backed up to the cloud.');
     } on CloudBackupCancelled {
       _snack('Backup cancelled.');
@@ -246,6 +297,12 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   @override
   Widget build(BuildContext context) {
     final email = ref.watch(authControllerProvider)?.email ?? '';
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final usage = ref.watch(cloudUsageProvider);
+    final lastRaw = prefs.getString('subtrack_last_cloud_backup');
+    final lastBackup = lastRaw == null
+        ? 'No backup yet.'
+        : 'Last backup: ${DateFormat('MMM d, y h:mm a').format(DateTime.parse(lastRaw).toLocal())}';
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -285,6 +342,39 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         style: TextStyle(color: AppColors.mutedText),
                       ),
                       const SizedBox(height: 12),
+                      usage.when(
+                        data: (used) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            LinearProgressIndicator(
+                              value: (used / cloudQuotaBytes).clamp(0.0, 1.0),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_mb(used)} / 100 MB used · $lastBackup',
+                              style: const TextStyle(
+                                color: AppColors.mutedText,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        loading: () => Text(
+                          'Checking cloud storage... · $lastBackup',
+                          style: const TextStyle(
+                            color: AppColors.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                        error: (error, stack) => Text(
+                          'Could not check cloud storage. · $lastBackup',
+                          style: const TextStyle(
+                            color: AppColors.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: _busy ? null : _backupNow,
                         child: Text(
@@ -319,6 +409,47 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                             ),
                           ),
                       ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _wifiOnly,
+                            onChanged: _busy
+                                ? null
+                                : (value) => _setWifiOnly(value ?? true),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _busy
+                                  ? null
+                                  : () => _setWifiOnly(!_wifiOnly),
+                              child: const Text('Back up on Wi-Fi only'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _includeOlder,
+                            onChanged: _busy
+                                ? null
+                                : (value) => _setIncludeOlder(value ?? false),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _busy
+                                  ? null
+                                  : () => _setIncludeOlder(!_includeOlder),
+                              child: const Text('Include older versions'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

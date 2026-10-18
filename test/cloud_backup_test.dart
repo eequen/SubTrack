@@ -247,6 +247,23 @@ void main() {
     expect(cloudBlobs.uploaded, isEmpty);
   });
 
+  test('include older versions uploads every blob', () async {
+    final (db, blobs) = await device('cloud-older');
+    await seedThesis(db, blobs);
+    final metadata = FakeMetadataApi();
+    final cloudBlobs = FakeBlobApi();
+
+    await repo(
+      db,
+      blobs,
+      metadata: metadata,
+      cloudBlobs: cloudBlobs,
+    ).backupNow(includeOlderVersions: true);
+
+    // v1 and v2 both go up when the student asked for the full history.
+    expect(cloudBlobs.uploaded.length, 2);
+  });
+
   test('cancel from the start uploads nothing', () async {
     final (db, blobs) = await device('cloud-cancel');
     await seedThesis(db, blobs);

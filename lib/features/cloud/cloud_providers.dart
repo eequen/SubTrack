@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/repositories/cloud_repo.dart';
@@ -25,4 +26,18 @@ final cloudRepoProvider = Provider<CloudRepo>((ref) {
     blobApi: SupabaseBlobApi(supa.Supabase.instance.client, user.id),
     userId: user.id,
   );
+});
+
+/// Cloud blob usage for the storage bar. Refresh with
+/// `ref.invalidate(cloudUsageProvider)` after a backup changes it.
+final cloudUsageProvider = FutureProvider<int>((ref) {
+  return ref.watch(cloudRepoProvider).cloudUsageBytes();
+});
+
+/// Checking the active network is injected so the Wi-Fi-only rule can be
+/// unit-tested without a real radio.
+typedef ConnectivityCheckFn = Future<List<ConnectivityResult>> Function();
+
+final connectivityCheckProvider = Provider<ConnectivityCheckFn>((_) {
+  return () => Connectivity().checkConnectivity();
 });
