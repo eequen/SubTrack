@@ -59,7 +59,7 @@ Future<_Setup> _setup(WidgetTester tester) async {
     });
     final prefs = await SharedPreferences.getInstance();
     await FakeAuthService(prefs: prefs)
-        .signIn(email: 'maria@school.edu', password: 'secret');
+        .signIn(identifier: 'maria@school.edu', password: 'secret');
 
     final subjectId = await SubjectRepo(db)
         .create(semesterId: semesterId, name: 'CP1', color: 0xFF3B4BDB);

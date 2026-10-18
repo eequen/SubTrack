@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/scaffold_with_nav.dart';
 import 'package:subtrack/features/activities/activities_page.dart';
+import 'package:subtrack/features/auth/create_account_page.dart';
 import 'package:subtrack/features/auth/login_page.dart';
 import 'package:subtrack/features/cloud/cloud_page.dart';
 import 'package:subtrack/features/files/activity_files_page.dart';
@@ -11,22 +12,30 @@ import 'package:subtrack/features/semesters/new_semester_page.dart';
 import 'package:subtrack/features/semesters/semesters_page.dart';
 import 'package:subtrack/features/subjects/subjects_page.dart';
 
-/// Routes from AGENTS.md section 14.
+/// Routes from AGENTS.md section 14 (plus the separate create-account
+/// screen).
 ///
-/// Signed-out users are redirected to `/login`; signed-in users visiting
-/// `/login` go to `/semesters`. The router is rebuilt by [routerProvider]
+/// Signed-out users are redirected to `/login` (the create-account screen
+/// counts as a signed-out screen too); signed-in users visiting either
+/// auth screen go to `/semesters`. The router is rebuilt by [routerProvider]
 /// whenever the auth state changes, so no refreshListenable is needed.
 GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation ?? '/login',
     redirect: (context, state) {
       final atLogin = state.matchedLocation == '/login';
-      if (!isSignedIn && !atLogin) return '/login';
-      if (isSignedIn && atLogin) return '/semesters';
+      final atCreate = state.matchedLocation == '/create-account';
+      final atAuth = atLogin || atCreate;
+      if (!isSignedIn && !atAuth) return '/login';
+      if (isSignedIn && atAuth) return '/semesters';
       return null;
     },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/create-account',
+        builder: (context, state) => const CreateAccountPage(),
+      ),
       GoRoute(
         path: '/semesters',
         builder: (context, state) => const SemestersPage(),

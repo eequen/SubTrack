@@ -41,7 +41,7 @@ Future<_Setup> _setup(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final auth = FakeAuthService(prefs: prefs);
-    await auth.signIn(email: 'maria@school.edu', password: 'secret');
+    await auth.signIn(identifier: 'maria@school.edu', password: 'secret');
     final db = AppDatabase.memory();
     final tmp = await Directory.systemTemp.createTemp('subtrack_history_page');
     addTearDown(() async {

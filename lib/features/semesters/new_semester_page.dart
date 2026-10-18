@@ -19,17 +19,14 @@ class NewSemesterPage extends ConsumerStatefulWidget {
 
 class _NewSemesterPageState extends ConsumerState<NewSemesterPage> {
   String _term = 'first';
-  final _schoolYearController = TextEditingController();
+  static const int _firstYear = 2020;
+  static const int _lastYear = 2040;
+  int _startYear = DateTime.now().year;
+  int _endYear = DateTime.now().year + 1;
   DateTime _start = DateTime.now();
   DateTime _end = DateTime.now().add(const Duration(days: 120));
   bool _busy = false;
   String? _error;
-
-  @override
-  void dispose() {
-    _schoolYearController.dispose();
-    super.dispose();
-  }
 
   Future<void> _pickDate(bool isStart) async {
     final picked = await showDatePicker(
@@ -59,7 +56,7 @@ class _NewSemesterPageState extends ConsumerState<NewSemesterPage> {
           .read(semesterRepoProvider)
           .create(
             term: _term,
-            schoolYear: _schoolYearController.text,
+            schoolYear: '$_startYear-$_endYear',
             startDate: _start,
             endDate: _end,
           );
@@ -106,10 +103,53 @@ class _NewSemesterPageState extends ConsumerState<NewSemesterPage> {
               onChanged: (v) => setState(() => _term = v ?? 'first'),
             ),
             const SizedBox(height: 16),
-            const Text('School year'),
-            TextField(
-              controller: _schoolYearController,
-              decoration: const InputDecoration(hintText: '2026-2027'),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Starting year'),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<int>(
+                        initialValue: _startYear,
+                        items: [
+                          for (var y = _firstYear; y <= _lastYear; y++)
+                            DropdownMenuItem(value: y, child: Text('$y')),
+                        ],
+                        onChanged: (v) => setState(() {
+                          _startYear = v ?? _startYear;
+                          // The ending year always stays after it.
+                          if (_endYear <= _startYear) {
+                            _endYear = _startYear + 1;
+                          }
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Ending year'),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<int>(
+                        initialValue: _endYear,
+                        items: [
+                          for (var y = _firstYear; y <= _lastYear; y++)
+                            if (y > _startYear)
+                              DropdownMenuItem(value: y, child: Text('$y')),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _endYear = v ?? _endYear),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             const Text('Start date'),

@@ -51,7 +51,7 @@ Future<_Setup> _setup(WidgetTester tester) async {
     });
     final prefs = await SharedPreferences.getInstance();
     await FakeAuthService(prefs: prefs)
-        .signIn(email: 'maria@school.edu', password: 'secret');
+        .signIn(identifier: 'maria@school.edu', password: 'secret');
 
     final subjects = SubjectRepo(db);
     final store = BlobStore(Future.value(tmp));

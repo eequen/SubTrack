@@ -48,13 +48,20 @@ class AuthController extends Notifier<AppUser?> {
   @override
   AppUser? build() => _service.currentUser;
 
-  Future<void> signIn({required String email, required String password}) async {
-    await _service.signIn(email: email, password: password);
+  Future<void> signIn({
+    required String identifier,
+    required String password,
+  }) async {
+    await _service.signIn(identifier: identifier, password: password);
     state = _service.currentUser;
   }
 
-  Future<void> signUp({required String email, required String password}) async {
-    await _service.signUp(email: email, password: password);
+  Future<void> signUp({
+    required String email,
+    required String username,
+    required String password,
+  }) async {
+    await _service.signUp(email: email, username: username, password: password);
     state = _service.currentUser;
   }
 

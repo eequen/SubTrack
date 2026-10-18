@@ -9,27 +9,41 @@ Future<FakeAuthService> _service() async {
 }
 
 void main() {
-  test('signIn accepts any email and password', () async {
+  test('signIn accepts an email or a username identifier', () async {
     final auth = await _service();
     expect(auth.currentUser, isNull);
 
-    await auth.signIn(email: 'maria@school.edu', password: 'secret');
-
+    await auth.signIn(identifier: 'maria@school.edu', password: 'secret');
     expect(auth.currentUser?.email, 'maria@school.edu');
+
+    final other = await _service();
+    await other.signIn(identifier: 'maria', password: 'secret');
+    expect(other.currentUser?.email, 'maria');
   });
 
-  test('signIn rejects invalid email and empty password', () async {
+  test('signIn rejects an empty identifier or password', () async {
     final auth = await _service();
 
     await expectLater(
-      auth.signIn(email: 'not-an-email', password: 'secret'),
+      auth.signIn(identifier: '   ', password: 'secret'),
       throwsA(isA<AuthException>()),
     );
     await expectLater(
-      auth.signIn(email: 'maria@school.edu', password: ''),
+      auth.signIn(identifier: 'maria', password: ''),
       throwsA(isA<AuthException>()),
     );
     expect(auth.currentUser, isNull);
+  });
+
+  test('signUp takes a username and email', () async {
+    final auth = await _service();
+
+    await auth.signUp(
+      email: 'maria@school.edu',
+      username: 'maria_01',
+      password: 'secret',
+    );
+    expect(auth.currentUser?.email, 'maria@school.edu');
   });
 
   test('session persists across instances, signOut clears it', () async {
@@ -37,7 +51,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     final first = FakeAuthService(prefs: prefs);
-    await first.signIn(email: 'maria@school.edu', password: 'secret');
+    await first.signIn(identifier: 'maria@school.edu', password: 'secret');
 
     final second = FakeAuthService(prefs: prefs);
     expect(second.currentUser?.email, 'maria@school.edu');
