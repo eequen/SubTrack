@@ -168,6 +168,12 @@ void main() {
     });
     expect(zips, isNotEmpty);
 
+    // Let the "Backup exported." snack bar dismiss first: in this short
+    // test viewport it would otherwise float over the Import button and
+    // absorb the tap.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 1));
+
     // Import asks for confirmation first; cancelling changes nothing.
     await tester.tap(find.text('Import local backup (.zip)'));
     await _settle(tester);
