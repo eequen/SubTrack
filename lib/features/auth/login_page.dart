@@ -5,7 +5,8 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 
-/// Screen 1 from AGENTS.md section 14: Login (also Create account).
+/// Screen 1 from AGENTS.md section 14: Log in with an email or a username.
+/// Creating an account lives on its own screen (`/create-account`).
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -14,15 +15,14 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _createMode = false;
   bool _busy = false;
   String? _error;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -34,17 +34,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
     final auth = ref.read(authControllerProvider.notifier);
     try {
-      if (_createMode) {
-        await auth.signUp(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-      } else {
-        await auth.signIn(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-      }
+      await auth.signIn(
+        identifier: _identifierController.text,
+        password: _passwordController.text,
+      );
       if (mounted) context.go('/semesters');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
@@ -74,14 +67,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               'Every subject, every version, safely kept.',
               style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
             ),
-            const SizedBox(height: 32),
-            Text('Email', style: textTheme.labelLarge),
+            const SizedBox(height: 16),
+            // First-time users must see where to go (requested change).
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.inProgressBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'First time here? Create an account first — the button at '
+                'the end of this screen.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.inProgressText,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('Email or username', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
+              controller: _identifierController,
               autocorrect: false,
-              decoration: const InputDecoration(hintText: 'maria@school.edu'),
+              enableSuggestions: false,
+              onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 16),
             Text('Password', style: textTheme.labelLarge),
@@ -89,7 +98,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(hintText: '••••••••••'),
               onSubmitted: (_) => _submit(),
             ),
             Align(
@@ -99,7 +107,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Password reset needs cloud login (Phase 5).',
+                        'Password reset is not available yet. Account '
+                        'recovery comes after the defense.',
                       ),
                     ),
                   );
@@ -113,21 +122,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ],
             ElevatedButton(
               onPressed: _busy ? null : _submit,
-              child: Text(
-                _busy
-                    ? 'Please wait…'
-                    : (_createMode ? 'Create account' : 'Log in'),
-              ),
+              child: Text(_busy ? 'Please wait…' : 'Log in'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                      _createMode = !_createMode;
-                      _error = null;
-                    }),
-              child: Text(_createMode ? 'Back to log in' : 'Create account'),
+              onPressed: _busy ? null : () => context.go('/create-account'),
+              child: const Text('Create account'),
             ),
             const SizedBox(height: 16),
             const Text(

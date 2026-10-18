@@ -9,6 +9,12 @@ const String _offlineMessage =
     'No internet connection. The first sign-in needs the internet; '
     'after that the app works offline.';
 
+/// Cloud tables are set up by the SQL scripts in docs/; this appears when a
+/// script was not run yet.
+const String _setupMessage =
+    'Cloud setup is incomplete. The username table is missing — run the '
+    'schema script in docs/ first.';
+
 /// Maps a Supabase or network failure to a friendly message
 /// (AGENTS.md section 9, Phase 5 task 2).
 String authErrorMessage(Object error) {
@@ -26,10 +32,20 @@ String authErrorMessage(Object error) {
     if (message.contains('rate limit') || message.contains('too many')) {
       return 'Too many attempts. Try again in a minute.';
     }
+    if (message.contains('at least 6') || message.contains('least 6')) {
+      return 'Passwords need at least 6 characters.';
+    }
+    if (message.contains('database error saving new user')) {
+      return 'Could not create the account. The username may be taken — '
+          'try another one.';
+    }
     if (error is supa.AuthRetryableFetchException) {
       return _offlineMessage;
     }
     return error.message;
+  }
+  if (error is supa.PostgrestException) {
+    return _setupMessage;
   }
   if (error is SocketException) {
     return _offlineMessage;
@@ -37,7 +53,26 @@ String authErrorMessage(Object error) {
   return 'Something went wrong. Try again.';
 }
 
-/// Real auth backed by Supabase (email + password).
+/// Turns "name123" into the account email behind that username so sign-in
+/// can accept an email OR a username.
+///
+/// [lookup] queries the public `profiles` table
+/// (docs/supabase_schema_profiles.sql). Email-shaped input passes through
+/// untouched. That account's email is only used for the actual sign-in.
+Future<String> resolveSignInEmail(
+  String identifier,
+  Future<String?> Function(String username) lookup,
+) async {
+  final trimmed = identifier.trim();
+  if (trimmed.contains('@')) return trimmed;
+  final email = await lookup(normalizeUsername(trimmed));
+  if (email == null) {
+    throw const AuthException('No account uses that username.');
+  }
+  return email;
+}
+
+/// Real auth backed by Supabase (email or username + password).
 ///
 /// supabase_flutter persists and restores its own session, so the app opens
 /// offline after the first sign-in (AGENTS.md constraint 2). The user id and
@@ -69,22 +104,49 @@ class SupabaseAuthService implements AuthService {
   AppUser? get currentUser => _currentUser;
 
   @override
-  Future<void> signIn({required String email, required String password}) async {
-    _validate(email, password);
+  Future<void> signIn({
+    required String identifier,
+    required String password,
+  }) async {
+    _validateCredentials(identifier, password);
+    final email = identifier.trim().contains('@')
+        ? identifier.trim()
+        : await resolveSignInEmail(identifier, _emailForUsername);
     await _guard(
-      () => _client.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      ),
+      () => _client.auth.signInWithPassword(email: email, password: password),
     );
     _rememberUser();
   }
 
   @override
-  Future<void> signUp({required String email, required String password}) async {
-    _validate(email, password);
+  Future<void> signUp({
+    required String email,
+    required String username,
+    required String password,
+  }) async {
+    final uname = normalizeUsername(username);
+    if (!usernamePattern.hasMatch(uname)) {
+      throw const AuthException(
+        'Usernames use 3-20 letters, numbers, or underscores and start '
+        'with a letter.',
+      );
+    }
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty || !trimmedEmail.contains('@')) {
+      throw const AuthException('Enter a valid email address.');
+    }
+    if (password.length < 6) {
+      throw const AuthException('Passwords need at least 6 characters.');
+    }
+    await _guard(() => _checkUsernameFree(uname));
     await _guard(
-      () => _client.auth.signUp(email: email.trim(), password: password),
+      () => _client.auth.signUp(
+        email: trimmedEmail,
+        password: password,
+        // The on_auth_user_created trigger (docs/supabase_schema_profiles.sql)
+        // copies this into the profiles table.
+        data: {'username': uname},
+      ),
     );
     // When email confirmation is still enabled, sign-up returns no session.
     _rememberUser();
@@ -104,20 +166,45 @@ class SupabaseAuthService implements AuthService {
     _currentUser = null;
   }
 
+  /// Asks the cloud for the email behind [username]; null means nobody
+  /// registered it. The profiles table is world-readable on purpose so a
+  /// signed-out phone can look usernames up.
+  Future<String?> _emailForUsername(String username) async {
+    final rows = await _guard(
+      () => _client
+          .from('profiles')
+          .select('email')
+          .eq('username', username)
+          .limit(1),
+    );
+    return rows.isEmpty ? null : (rows.single['email'] as String?);
+  }
+
+  Future<void> _checkUsernameFree(String uname) async {
+    final rows = await _guard(
+      () =>
+          _client.from('profiles').select('id').eq('username', uname).limit(1),
+    );
+    if (rows.isNotEmpty) {
+      throw const AuthException('That username is taken. Pick another one.');
+    }
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();
     } on supa.AuthException catch (e) {
+      throw AuthException(authErrorMessage(e));
+    } on supa.PostgrestException catch (e) {
       throw AuthException(authErrorMessage(e));
     } on SocketException {
       throw const AuthException(_offlineMessage);
     }
   }
 
-  void _validate(String email, String password) {
-    final trimmed = email.trim();
-    if (trimmed.isEmpty || !trimmed.contains('@')) {
-      throw const AuthException('Enter a valid email address.');
+  void _validateCredentials(String identifier, String password) {
+    if (identifier.trim().isEmpty) {
+      throw const AuthException('Enter your email or username.');
     }
     if (password.isEmpty) {
       throw const AuthException('Enter your password.');

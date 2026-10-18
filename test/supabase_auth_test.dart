@@ -36,6 +36,22 @@ void main() {
       expect(message, contains('Too many attempts'));
     });
 
+    test('explains a too-short password', () {
+      final message = authErrorMessage(
+        const supa.AuthApiException(
+          'Password should be at least 6 characters.',
+        ),
+      );
+      expect(message, 'Passwords need at least 6 characters.');
+    });
+
+    test('explains a failed account row (username collision)', () {
+      final message = authErrorMessage(
+        const supa.AuthApiException('Database error saving new user'),
+      );
+      expect(message, contains('username may be taken'));
+    });
+
     test('explains a network failure', () {
       expect(
         authErrorMessage(const SocketException('offline')),
@@ -47,10 +63,53 @@ void main() {
       );
     });
 
+    test('explains a missing profiles table', () {
+      final message = authErrorMessage(
+        const supa.PostgrestException(
+          message: 'relation does not exist',
+          code: '42P01',
+        ),
+      );
+      expect(message, contains('Cloud setup is incomplete'));
+    });
+
     test('falls back to a generic message', () {
       expect(
         authErrorMessage(Exception('mystery')),
         'Something went wrong. Try again.',
+      );
+    });
+  });
+
+  group('resolveSignInEmail', () {
+    test('passes email-shaped input through', () async {
+      final email = await resolveSignInEmail(
+        ' Maria@School.edu ',
+        (username) => throw StateError('must not query for emails'),
+      );
+      expect(email, 'Maria@School.edu');
+    });
+
+    test('resolves a username through the lookup', () async {
+      final queried = <String>[];
+      final email = await resolveSignInEmail(' Maria_01 ', (username) {
+        queried.add(username);
+        return Future.value('maria@school.edu');
+      });
+      expect(email, 'maria@school.edu');
+      expect(queried, ['maria_01']);
+    });
+
+    test('rejects a username nobody registered', () async {
+      await expectLater(
+        resolveSignInEmail('ghost', (username) => Future.value(null)),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'No account uses that username.',
+          ),
+        ),
       );
     });
   });
@@ -81,17 +140,67 @@ void main() {
       expect(service(prefs).currentUser, isNull);
     });
 
-    test('rejects invalid input before any network call', () async {
+    test('sign-in rejects empty identifiers before any network call', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final auth = service(prefs);
       await expectLater(
-        auth.signIn(email: 'not-an-email', password: 'secret'),
-        throwsA(isA<AuthException>()),
+        auth.signIn(identifier: '   ', password: 'secret'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'Enter your email or username.',
+          ),
+        ),
       );
       await expectLater(
-        auth.signIn(email: 'maria@school.edu', password: ''),
-        throwsA(isA<AuthException>()),
+        auth.signIn(identifier: 'maria', password: ''),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'Enter your password.',
+          ),
+        ),
+      );
+      expect(auth.currentUser, isNull);
+    });
+
+    test('sign-up validates username, email, and password first', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final auth = service(prefs);
+
+      await expectLater(
+        auth.signUp(email: 'm@x.io', username: 'no!', password: 'secret123'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            contains('Usernames use 3-20'),
+          ),
+        ),
+      );
+      await expectLater(
+        auth.signUp(email: 'not-an-email', username: 'maria', password: 'a'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'Enter a valid email address.',
+          ),
+        ),
+      );
+      await expectLater(
+        auth.signUp(email: 'm@x.io', username: 'maria', password: ''),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'Passwords need at least 6 characters.',
+          ),
+        ),
       );
       expect(auth.currentUser, isNull);
     });
