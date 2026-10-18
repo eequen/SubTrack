@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/shared/chips.dart';
 
@@ -18,7 +19,10 @@ class ActivityFormResult {
   final String status;
 }
 
-final _dateFormat = DateFormat('MMM d, yyyy');
+final _deadlineFormat = DateFormat('MMM d, yyyy h:mm a');
+
+/// Deadlines default to the end of the day, and reminders fire at that time.
+const _defaultTime = TimeOfDay(hour: 23, minute: 59);
 
 /// Create dialog; returns null when cancelled.
 Future<ActivityFormResult?> showNewActivityDialog(BuildContext context) {
@@ -89,14 +93,34 @@ class _ActivityDialogState extends State<_ActivityDialog> {
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+  Future<void> _pickDeadline() async {
+    final previous = _deadline;
+    final date = await showDatePicker(
       context: context,
-      initialDate: _deadline ?? DateTime.now(),
+      initialDate: previous ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) setState(() => _deadline = picked);
+    if (date == null || !mounted) return;
+    // Cancelling the time step keeps the previous time, or end of day.
+    final time = await showTimePicker(
+      context: context,
+      initialTime: previous != null
+          ? TimeOfDay.fromDateTime(previous)
+          : _defaultTime,
+    );
+    final moment =
+        time ??
+        (previous != null ? TimeOfDay.fromDateTime(previous) : _defaultTime);
+    setState(() {
+      _deadline = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        moment.hour,
+        moment.minute,
+      );
+    });
   }
 
   void _save() {
@@ -150,26 +174,34 @@ class _ActivityDialogState extends State<_ActivityDialog> {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 OutlinedButton.icon(
-                  onPressed: _pickDate,
+                  onPressed: _pickDeadline,
                   icon: const Icon(Icons.event, size: 18),
                   label: Text(
                     _deadline == null
                         ? 'Set deadline'
-                        : _dateFormat.format(_deadline!),
+                        : _deadlineFormat.format(_deadline!),
                   ),
                 ),
-                if (_deadline != null) ...[
-                  const SizedBox(width: 8),
+                if (_deadline != null)
                   TextButton(
                     onPressed: () => setState(() => _deadline = null),
                     child: const Text('Clear'),
                   ),
-                ],
               ],
             ),
+            if (_deadline != null) ...[
+              const SizedBox(height: 4),
+              const Text(
+                'A reminder will appear when this is due.',
+                style: TextStyle(color: AppColors.mutedText, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               controller: _notesController,

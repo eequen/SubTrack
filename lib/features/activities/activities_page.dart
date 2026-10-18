@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/activities/activity_dialog.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
 
@@ -25,6 +28,33 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
   String? _filter;
 
   late final int _subjectId = int.tryParse(widget.subjectId) ?? -1;
+
+  @override
+  void initState() {
+    super.initState();
+    // Keep the notification schedule in step with the database (after a
+    // reinstall, restored data, or alarms cleared by the system).
+    unawaited(ref.read(reminderServiceProvider).syncAll());
+  }
+
+  bool _isFuture(DateTime? deadline) =>
+      deadline != null && deadline.isAfter(DateTime.now());
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Re-creates deadline reminders after an activity changed; asks for the
+  /// notification permission when a future deadline was just saved.
+  Future<void> _syncReminders({bool askPermission = false}) async {
+    final service = ref.read(reminderServiceProvider);
+    if (askPermission && !await service.requestPermission()) {
+      _snack('Allow notifications to get deadline reminders.');
+    }
+    await service.syncAll();
+  }
 
   void _back() {
     if (context.canPop()) {
@@ -46,6 +76,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
           deadline: result.deadline,
           status: result.status,
         );
+    await _syncReminders(askPermission: _isFuture(result.deadline));
   }
 
   Future<void> _runAction(Activity activity) async {
@@ -100,11 +131,14 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
             status: result.status,
           );
           await repo.setDeadline(activity.id, result.deadline);
+          await _syncReminders(askPermission: _isFuture(result.deadline));
         }
       case 'archive':
         await repo.setArchived(activity.id, true);
+        await _syncReminders();
       case 'unarchive':
         await repo.setArchived(activity.id, false);
+        await _syncReminders();
       case 'delete':
         final confirmed = await showDialog<bool>(
           context: context,
@@ -126,7 +160,10 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
             ],
           ),
         );
-        if (confirmed == true) await repo.delete(activity.id);
+        if (confirmed == true) {
+          await repo.delete(activity.id);
+          await _syncReminders();
+        }
     }
   }
 
