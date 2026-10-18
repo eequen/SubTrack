@@ -14,8 +14,8 @@ import 'package:subtrack/features/semesters/semester_providers.dart';
 
 /// Screen 10 from AGENTS.md section 14: Cloud backup.
 ///
-/// Phase 5 delivers the manual Back up now button; Restore from cloud, the
-/// storage bar, and the Wi-Fi-only setting follow.
+/// Phase 5 delivers the manual Back up now and Restore from cloud buttons;
+/// the storage bar and the Wi-Fi-only setting follow.
 class CloudPage extends ConsumerStatefulWidget {
   const CloudPage({super.key});
 
@@ -27,8 +27,11 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   bool _exporting = false;
   bool _importing = false;
   bool _backingUp = false;
+  bool _restoring = false;
   bool _cancelRequested = false;
   String? _progressText;
+
+  bool get _busy => _backingUp || _restoring;
 
   void _snack(String message) {
     if (!mounted) return;
@@ -78,6 +81,97 @@ class _CloudPageState extends ConsumerState<CloudPage> {
       if (mounted) {
         setState(() {
           _backingUp = false;
+          _progressText = null;
+        });
+      }
+    }
+  }
+
+  /// Restore from cloud (AGENTS.md section 9, Phase 5 task 7): show what
+  /// would come back, ask for confirmation, then replace everything on
+  /// this device.
+  Future<void> _restore() async {
+    final BackupContents contents;
+    try {
+      contents = await ref.read(cloudRepoProvider).peekCloud();
+    } on SocketException {
+      _snack('No internet connection. Restore needs the internet.');
+      return;
+    } catch (e) {
+      _snack('Could not check the cloud: $e');
+      return;
+    }
+    if (contents.semesters == 0 && contents.commits == 0) {
+      _snack('Nothing is in the cloud yet. Press Back up now first.');
+      return;
+    }
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore from cloud?'),
+        content: Text(
+          'This replaces everything in the app with the cloud backup.\n\n'
+          'Semesters: ${contents.semesters} · '
+          'Subjects: ${contents.subjects} · '
+          'Activities: ${contents.activities} · '
+          'Versions: ${contents.commits}\n\n'
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      _restoring = true;
+      _cancelRequested = false;
+      _progressText = null;
+    });
+    try {
+      await ref
+          .read(cloudRepoProvider)
+          .restoreFromCloud(
+            onProgress: (progress) {
+              if (!mounted) return;
+              setState(() {
+                _progressText = switch (progress.phase) {
+                  CloudRestorePhase.preparing => 'Checking the cloud...',
+                  CloudRestorePhase.downloading =>
+                    progress.total == 0
+                        ? null
+                        : 'Downloading files ${progress.current} of '
+                              '${progress.total}...',
+                  CloudRestorePhase.replacing => 'Putting everything back...',
+                  CloudRestorePhase.done => null,
+                };
+              });
+            },
+            cancelled: () => _cancelRequested,
+          );
+      // The cloud brings its own semesters; the student chooses again.
+      await ref.read(selectedSemesterProvider.notifier).select(null);
+      _snack('Restored from the cloud. Choose a semester to see it.');
+    } on CloudBackupCancelled {
+      _snack('Restore cancelled.');
+    } on CloudBackupException catch (e) {
+      _snack(e.message);
+    } on SocketException {
+      _snack('No internet connection. Restore needs the internet.');
+    } catch (e) {
+      _snack('Could not restore: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _restoring = false;
           _progressText = null;
         });
       }
@@ -192,12 +286,19 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
-                        onPressed: _backingUp ? null : _backupNow,
+                        onPressed: _busy ? null : _backupNow,
                         child: Text(
                           _backingUp ? 'Backing up...' : 'Back up now',
                         ),
                       ),
-                      if (_backingUp) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _busy ? null : _restore,
+                        child: Text(
+                          _restoring ? 'Restoring...' : 'Restore from cloud',
+                        ),
+                      ),
+                      if (_backingUp || _restoring) ...[
                         const SizedBox(height: 8),
                         Row(
                           children: [

@@ -10,24 +10,42 @@ import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/data/storage/blob_store.dart';
 
-/// Records upserted rows per table, in call order.
+/// Records upserted rows per table, in call order, and serves [fetched]
+/// rows for reads — a fake cloud between two "devices".
 class FakeMetadataApi implements CloudMetadataApi {
+  FakeMetadataApi({Map<String, List<Map<String, dynamic>>>? fetched})
+    : fetched = fetched ?? {};
+
+  /// Rows fetch() serves, keyed by table.
+  Map<String, List<Map<String, dynamic>>> fetched;
   final rows = <String, List<Map<String, dynamic>>>{};
 
   @override
   Future<void> upsert(String table, List<Map<String, dynamic>> batch) async {
     rows.putIfAbsent(table, () => []).addAll(batch);
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetch(String table) async =>
+      fetched[table] ?? const [];
 }
 
-/// Pretends to be the account's blob folder, starting from [existing].
+/// Pretends to be the account's blob folder, starting from [existing] and
+/// serving bytes from [stored]. Keys of [stored] are automatically visible
+/// to listBlobHashes, like a real bucket listing.
 class FakeBlobApi implements CloudBlobApi {
-  FakeBlobApi({Set<String>? existing, this.used = 0})
-    : existing = Set.of(existing ?? const {});
+  FakeBlobApi({
+    Set<String>? existing,
+    this.used = 0,
+    Map<String, Uint8List>? stored,
+  }) : stored = stored ?? <String, Uint8List>{},
+       existing = Set.of({...?existing, ...?stored?.keys});
 
   Set<String> existing;
+  Map<String, Uint8List> stored;
   int used;
   final uploaded = <String, Uint8List>{};
+  final downloaded = <String>[];
 
   @override
   Future<Set<String>> listBlobHashes() async => Set.of(existing);
@@ -35,8 +53,19 @@ class FakeBlobApi implements CloudBlobApi {
   @override
   Future<void> uploadBlob(String hash, Uint8List bytes) async {
     uploaded[hash] = bytes;
+    stored[hash] = bytes;
     existing.add(hash);
     used += bytes.length;
+  }
+
+  @override
+  Future<Uint8List> downloadBlob(String hash) async {
+    final bytes = stored[hash];
+    if (bytes == null) {
+      throw StateError('FakeBlobApi has no blob $hash');
+    }
+    downloaded.add(hash);
+    return bytes;
   }
 
   @override
@@ -257,4 +286,161 @@ void main() {
     expect(metadata.rows['commits']!.length, 2);
     expect(cloudBlobs.uploaded, isEmpty);
   });
+
+  test(
+    'restore rebuilds a fresh device, keeping restorable versions only',
+    () async {
+      final (dbA, blobsA) = await device('restore-a');
+      await seedThesis(dbA, blobsA);
+      final metadata = FakeMetadataApi();
+      final cloudBlobs = FakeBlobApi();
+      await repo(
+        dbA,
+        blobsA,
+        metadata: metadata,
+        cloudBlobs: cloudBlobs,
+      ).backupNow();
+
+      // Fresh phone: junk data on it, the cloud serves what was uploaded.
+      final (dbB, blobsB) = await device('restore-b');
+      await SemesterRepo(dbB).create(
+        term: 'summer',
+        schoolYear: '1999-2000',
+        startDate: DateTime(1999, 6, 1),
+        endDate: DateTime(1999, 7, 31),
+      );
+      final restoreMetadata = FakeMetadataApi(fetched: metadata.rows);
+      final restoreBlobs = FakeBlobApi(stored: cloudBlobs.uploaded);
+      final repoB = repo(
+        dbB,
+        blobsB,
+        metadata: restoreMetadata,
+        cloudBlobs: restoreBlobs,
+      );
+
+      final contents = await repoB.peekCloud();
+      expect(contents.semesters, 1);
+      expect(contents.commits, 2);
+
+      await repoB.restoreFromCloud();
+
+      // The junk semester is gone; the backup's rows are back with their
+      // original ids.
+      final semestersB = await dbB.select(dbB.semesters).get();
+      expect(semestersB.length, 1);
+      expect(semestersB.single.schoolYear, '2026-2027');
+      expect((await dbB.select(dbB.subjects).get()).single.name, 'CP1');
+      expect((await dbB.select(dbB.activities).get()).single.title, 'Thesis');
+      final filesB = await dbB.select(dbB.files).get();
+      expect(filesB.single.displayName, 'thesis.txt');
+
+      // Only v2 was backed up (latest only), so v1 does not come back and
+      // the file points straight at v2.
+      final commitsB = await dbB.select(dbB.commits).get();
+      expect(commitsB.length, 1);
+      expect(commitsB.single.versionNo, 2);
+      expect(filesB.single.currentCommitId, commitsB.single.id);
+      expect(
+        String.fromCharCodes(await blobsB.read(commitsB.single.blobHash)),
+        'v2 content',
+      );
+    },
+  );
+
+  test('a damaged download fails the restore and keeps local data', () async {
+    final (dbA, blobsA) = await device('restore-bad-a');
+    await seedThesis(dbA, blobsA);
+    final metadata = FakeMetadataApi();
+    final cloudBlobs = FakeBlobApi();
+    await repo(
+      dbA,
+      blobsA,
+      metadata: metadata,
+      cloudBlobs: cloudBlobs,
+    ).backupNow();
+
+    final (dbB, blobsB) = await device('restore-bad-b');
+    await SemesterRepo(dbB).create(
+      term: 'second',
+      schoolYear: '1999-2000',
+      startDate: DateTime(1999, 1, 1),
+      endDate: DateTime(1999, 5, 31),
+    );
+    final tampered = {
+      for (final entry in cloudBlobs.uploaded.entries)
+        entry.key: Uint8List.fromList('tampered'.codeUnits),
+    };
+    final repoB = repo(
+      dbB,
+      blobsB,
+      metadata: FakeMetadataApi(fetched: metadata.rows),
+      cloudBlobs: FakeBlobApi(stored: tampered),
+    );
+
+    await expectLater(
+      repoB.restoreFromCloud(),
+      throwsA(isA<CloudBackupException>()),
+    );
+    // Nothing was replaced.
+    expect(
+      (await dbB.select(dbB.semesters).get()).single.schoolYear,
+      '1999-2000',
+    );
+    expect(await dbB.select(dbB.commits).get(), isEmpty);
+  });
+
+  test('cancel before the replace keeps local data', () async {
+    final (dbA, blobsA) = await device('restore-cancel-a');
+    await seedThesis(dbA, blobsA);
+    final metadata = FakeMetadataApi();
+    final cloudBlobs = FakeBlobApi();
+    await repo(
+      dbA,
+      blobsA,
+      metadata: metadata,
+      cloudBlobs: cloudBlobs,
+    ).backupNow();
+
+    final (dbB, blobsB) = await device('restore-cancel-b');
+    await SemesterRepo(dbB).create(
+      term: 'second',
+      schoolYear: '1999-2000',
+      startDate: DateTime(1999, 1, 1),
+      endDate: DateTime(1999, 5, 31),
+    );
+    final restoreBlobs = FakeBlobApi(stored: cloudBlobs.uploaded);
+
+    // Cancelled once the (only) blob has been downloaded, so the
+    // destructive replace never runs.
+    await expectLater(
+      repo(
+        dbB,
+        blobsB,
+        metadata: FakeMetadataApi(fetched: metadata.rows),
+        cloudBlobs: restoreBlobs,
+      ).restoreFromCloud(cancelled: () => restoreBlobs.downloaded.isNotEmpty),
+      throwsA(isA<CloudBackupCancelled>()),
+    );
+    expect(
+      (await dbB.select(dbB.semesters).get()).single.schoolYear,
+      '1999-2000',
+    );
+    expect(await dbB.select(dbB.commits).get(), isEmpty);
+  });
+
+  test(
+    'an empty cloud backup is refused instead of wiping the device',
+    () async {
+      final (db, blobs) = await device('restore-empty');
+      await expectLater(
+        repo(
+          db,
+          blobs,
+          metadata: FakeMetadataApi(),
+          cloudBlobs: FakeBlobApi(),
+        ).restoreFromCloud(),
+        throwsA(isA<CloudBackupException>()),
+      );
+    },
+  );
 }
