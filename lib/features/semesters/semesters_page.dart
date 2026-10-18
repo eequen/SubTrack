@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/chips.dart';
 
@@ -50,6 +51,8 @@ class SemestersPage extends ConsumerWidget {
       if (selected == item.semester.id) {
         await ref.read(selectedSemesterProvider.notifier).select(null);
       }
+      // Deleting a semester cascades to its activities: rebuild reminders.
+      await ref.read(reminderServiceProvider).syncAll();
     }
   }
 
