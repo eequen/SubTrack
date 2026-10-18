@@ -16,6 +16,11 @@ class SupabaseMetadataApi implements CloudMetadataApi {
     }
     await _client.from(table).upsert(rows, onConflict: 'user_id,id');
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetch(String table) async {
+    return await _client.from(table).select();
+  }
 }
 
 /// Storage-backed blobs under `<userId>/blobs/<sha256>` in the private
@@ -53,6 +58,11 @@ class SupabaseBlobApi implements CloudBlobApi {
             contentType: 'application/octet-stream',
           ),
         );
+  }
+
+  @override
+  Future<Uint8List> downloadBlob(String hash) async {
+    return await _client.storage.from(_bucket).download(_path(hash));
   }
 
   @override

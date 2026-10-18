@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
+import 'package:subtrack/core/hashing.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/backup_repo.dart';
 import 'package:subtrack/data/storage/blob_store.dart';
 
 /// Free-plan storage quota per account (AGENTS.md constraint 7).
@@ -9,6 +11,10 @@ const int cloudQuotaBytes = 100 * 1024 * 1024;
 abstract class CloudMetadataApi {
   /// Upserts rows into [table]; every row already carries user_id and id.
   Future<void> upsert(String table, List<Map<String, dynamic>> rows);
+
+  /// Reads every row of [table] the account can see; RLS keeps it to its
+  /// own rows.
+  Future<List<Map<String, dynamic>>> fetch(String table);
 }
 
 abstract class CloudBlobApi {
@@ -16,6 +22,9 @@ abstract class CloudBlobApi {
   Future<Set<String>> listBlobHashes();
 
   Future<void> uploadBlob(String hash, Uint8List bytes);
+
+  /// Downloads the account's blob [hash].
+  Future<Uint8List> downloadBlob(String hash);
 
   /// Bytes used by the account's blobs folder.
   Future<int> usedBytes();
@@ -41,6 +50,20 @@ class CloudBackupCancelled implements Exception {
 
   @override
   String toString() => 'Backup cancelled.';
+}
+
+/// Phases reported while a cloud restore runs.
+enum CloudRestorePhase { preparing, downloading, replacing, done }
+
+/// Progress snapshot for Restore from cloud.
+class CloudRestoreProgress {
+  const CloudRestoreProgress(this.phase, {this.current = 0, this.total = 0});
+
+  final CloudRestorePhase phase;
+
+  /// Within [CloudRestorePhase.downloading]: 1-based index and count.
+  final int current;
+  final int total;
 }
 
 /// Upload failed for a reason worth showing to the student.
@@ -162,6 +185,228 @@ class CloudRepo {
     }
     report(const CloudBackupProgress(CloudBackupPhase.done));
   }
+
+  /// What a restore from the cloud would bring, for the confirm dialog.
+  /// Reads the cloud without touching the local database.
+  Future<BackupContents> peekCloud() async {
+    final (semesters, subjects, activities, files, commits) =
+        await _fetchMetadata();
+    return BackupContents(
+      semesters: semesters.length,
+      subjects: subjects.length,
+      activities: activities.length,
+      files: files.length,
+      commits: commits.length,
+    );
+  }
+
+  /// Restores from the cloud (AGENTS.md section 9, Phase 5 task 7) by
+  /// replacing everything on this device with the cloud backup.
+  ///
+  /// Default backups keep only the latest blob per file, so commits whose
+  /// blob was never uploaded are left out and each file points at its
+  /// newest restored version. Existing commits are never rewritten; the
+  /// replaced rows belong to this device alone.
+  Future<void> restoreFromCloud({
+    void Function(CloudRestoreProgress progress)? onProgress,
+    bool Function()? cancelled,
+  }) async {
+    void report(CloudRestoreProgress progress) => onProgress?.call(progress);
+    bool isCancelled() => cancelled?.call() ?? false;
+
+    // 1. Fetch the metadata.
+    report(const CloudRestoreProgress(CloudRestorePhase.preparing));
+    final (semesters, subjects, activities, allFiles, allCommits) =
+        await _fetchMetadata();
+    if (semesters.isEmpty &&
+        subjects.isEmpty &&
+        activities.isEmpty &&
+        allFiles.isEmpty &&
+        allCommits.isEmpty) {
+      throw const CloudBackupException(
+        'Nothing is in the cloud yet. Press Back up now first.',
+      );
+    }
+    final cloudHashes = await blobApi.listBlobHashes();
+
+    // 2. Download blobs this device is missing, verifying each download
+    // against its hash so a damaged transfer never reaches the database.
+    final needed = {for (final commit in allCommits) commit.blobHash};
+    final toDownload = [
+      for (final hash in needed)
+        if (!await blobs.exists(hash) && cloudHashes.contains(hash)) hash,
+    ];
+    var downloaded = 0;
+    for (final hash in toDownload) {
+      if (isCancelled()) {
+        throw const CloudBackupCancelled();
+      }
+      downloaded++;
+      report(
+        CloudRestoreProgress(
+          CloudRestorePhase.downloading,
+          current: downloaded,
+          total: toDownload.length,
+        ),
+      );
+      final bytes = await blobApi.downloadBlob(hash);
+      if (sha256Hex(bytes) != hash) {
+        throw const CloudBackupException('A file from the cloud is damaged.');
+      }
+      await blobs.saveBytes(bytes);
+    }
+
+    // 3. Keep only the commits whose contents are on this device now, and
+    // keep `restored from` links only when their target came back too.
+    final keptIds = <int>{
+      for (final commit in allCommits)
+        if (await blobs.exists(commit.blobHash)) commit.id,
+    };
+    final keptCommits = [
+      for (final commit in allCommits)
+        if (keptIds.contains(commit.id))
+          Commit(
+            id: commit.id,
+            fileId: commit.fileId,
+            versionNo: commit.versionNo,
+            message: commit.message,
+            blobHash: commit.blobHash,
+            sizeBytes: commit.sizeBytes,
+            mimeType: commit.mimeType,
+            restoredFromCommitId: keptIds.contains(commit.restoredFromCommitId)
+                ? commit.restoredFromCommitId
+                : null,
+            createdAt: commit.createdAt,
+          ),
+    ];
+
+    // 4. Each file points at its newest kept version; a file without any
+    // kept version does not come back.
+    final latestKept = <int, (int, int)>{}; // fileId -> (version, commit id)
+    for (final commit in keptCommits) {
+      final current = latestKept[commit.fileId];
+      if (current == null || commit.versionNo > current.$1) {
+        latestKept[commit.fileId] = (commit.versionNo, commit.id);
+      }
+    }
+    final restoredFiles = [
+      for (final file in allFiles)
+        if (latestKept[file.id] != null)
+          DbFile(
+            id: file.id,
+            activityId: file.activityId,
+            displayName: file.displayName,
+            currentCommitId: latestKept[file.id]!.$2,
+            createdAt: file.createdAt,
+          ),
+    ];
+
+    if (isCancelled()) {
+      throw const CloudBackupCancelled();
+    }
+
+    // 5. Replace rows in one transaction, children before parents.
+    report(const CloudRestoreProgress(CloudRestorePhase.replacing));
+    await db.transaction(() async {
+      await db.delete(db.commits).go();
+      await db.delete(db.files).go();
+      await db.delete(db.activities).go();
+      await db.delete(db.subjects).go();
+      await db.delete(db.semesters).go();
+      for (final semester in semesters) {
+        await db.into(db.semesters).insert(semester.toCompanion(true));
+      }
+      for (final subject in subjects) {
+        await db.into(db.subjects).insert(subject.toCompanion(true));
+      }
+      for (final activity in activities) {
+        await db.into(db.activities).insert(activity.toCompanion(true));
+      }
+      for (final file in restoredFiles) {
+        await db.into(db.files).insert(file.toCompanion(true));
+      }
+      for (final commit in keptCommits) {
+        await db.into(db.commits).insert(commit.toCompanion(true));
+      }
+    });
+    report(const CloudRestoreProgress(CloudRestorePhase.done));
+  }
+
+  Future<
+    (List<Semester>, List<Subject>, List<Activity>, List<DbFile>, List<Commit>)
+  >
+  _fetchMetadata() async {
+    return (
+      [for (final row in await metadataApi.fetch('semesters')) _semester(row)],
+      [for (final row in await metadataApi.fetch('subjects')) _subject(row)],
+      [for (final row in await metadataApi.fetch('activities')) _activity(row)],
+      [for (final row in await metadataApi.fetch('files')) _file(row)],
+      [for (final row in await metadataApi.fetch('commits')) _commit(row)],
+    );
+  }
+
+  /// PostgREST returns whole bigints as JSON strings in some setups, so
+  /// accept both forms.
+  int _int(Object? value) => value is int ? value : int.parse(value! as String);
+
+  DateTime _date(Object? value) => DateTime.parse(value! as String);
+
+  DateTime? _dateOrNull(Object? value) =>
+      value == null ? null : DateTime.parse(value as String);
+
+  Semester _semester(Map<String, dynamic> row) => Semester(
+    id: _int(row['id']),
+    term: row['term'] as String,
+    schoolYear: row['school_year'] as String,
+    startDate: _date(row['start_date']),
+    endDate: _date(row['end_date']),
+    createdAt: _date(row['created_at']),
+  );
+
+  Subject _subject(Map<String, dynamic> row) => Subject(
+    id: _int(row['id']),
+    semesterId: _int(row['semester_id']),
+    name: row['name'] as String,
+    color: _int(row['color']),
+    icon: row['icon'] as String,
+    isArchived: row['is_archived'] as bool,
+    createdAt: _date(row['created_at']),
+  );
+
+  Activity _activity(Map<String, dynamic> row) => Activity(
+    id: _int(row['id']),
+    subjectId: _int(row['subject_id']),
+    title: row['title'] as String,
+    notes: row['notes'] as String,
+    deadline: _dateOrNull(row['deadline']),
+    status: row['status'] as String,
+    isArchived: row['is_archived'] as bool,
+    createdAt: _date(row['created_at']),
+  );
+
+  DbFile _file(Map<String, dynamic> row) => DbFile(
+    id: _int(row['id']),
+    activityId: _int(row['activity_id']),
+    displayName: row['display_name'] as String,
+    currentCommitId: row['current_commit_id'] == null
+        ? null
+        : _int(row['current_commit_id']),
+    createdAt: _date(row['created_at']),
+  );
+
+  Commit _commit(Map<String, dynamic> row) => Commit(
+    id: _int(row['id']),
+    fileId: _int(row['file_id']),
+    versionNo: _int(row['version_no']),
+    message: row['message'] as String,
+    blobHash: row['blob_hash'] as String,
+    sizeBytes: _int(row['size_bytes']),
+    mimeType: row['mime_type'] as String,
+    restoredFromCommitId: row['restored_from_commit_id'] == null
+        ? null
+        : _int(row['restored_from_commit_id']),
+    createdAt: _date(row['created_at']),
+  );
 
   /// The latest commit's blob hash per file, with its size. Files without a
   /// commit cannot exist (upload always creates v1), so the join skips none.
