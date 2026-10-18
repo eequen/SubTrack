@@ -3,6 +3,29 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/router.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/features/auth/supabase_auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
+
+/// Supabase credentials arrive only through --dart-define (AGENTS.md
+/// constraint 8: no secrets in git). They are empty in tests and in
+/// teammates' builds, which keeps the [FakeAuthService].
+const String _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const String _supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+/// True when the app was built with Supabase credentials.
+bool get supabaseConfigured =>
+    _supabaseUrl.isNotEmpty && _supabaseKey.isNotEmpty;
+
+/// Initializes Supabase when credentials were provided. Called once from
+/// main() before runApp; must not run in tests (no defines there).
+Future<void> initializeSupabase() async {
+  if (supabaseConfigured) {
+    await supa.Supabase.initialize(
+      url: _supabaseUrl,
+      publishableKey: _supabaseKey,
+    );
+  }
+}
 
 /// Overridden in [main] with the real instance and in tests with mocks.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -10,7 +33,11 @@ final sharedPreferencesProvider = Provider<SharedPreferences>(
 );
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return FakeAuthService(prefs: ref.watch(sharedPreferencesProvider));
+  final prefs = ref.watch(sharedPreferencesProvider);
+  if (supabaseConfigured) {
+    return SupabaseAuthService.app(prefs: prefs);
+  }
+  return FakeAuthService(prefs: prefs);
 });
 
 /// Holds the signed-in user. The router watches this and rebuilds on
