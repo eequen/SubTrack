@@ -105,7 +105,16 @@ class AppDatabase extends _$AppDatabase {
 
   AppDatabase.forUser(String userId) : super(_local('subtrack_$userId.sqlite'));
 
-  AppDatabase.memory() : super(NativeDatabase.memory());
+  AppDatabase.memory() : super(_memory());
+
+  /// The in-memory database used by tests. Query streams are closed
+  /// synchronously (drift's `closeStreamsSynchronously`): the default
+  /// delayed shutdown schedules `Timer.run` calls that widget tests cannot
+  /// flush while `await close()` runs, deadlocking the fake async zone.
+  static QueryExecutor _memory() => DatabaseConnection(
+    NativeDatabase.memory(),
+    closeStreamsSynchronously: true,
+  );
 
   static QueryExecutor _local(String name) => driftDatabase(name: name);
 

@@ -22,6 +22,20 @@ class UpcomingActivity {
   final String subjectName;
 }
 
+class SemesterActivityItem {
+  const SemesterActivityItem({
+    required this.activity,
+    required this.subjectName,
+    required this.fileCount,
+    required this.latestVersion,
+  });
+
+  final Activity activity;
+  final String subjectName;
+  final int fileCount;
+  final int? latestVersion;
+}
+
 class ActivityRepo {
   ActivityRepo(this.db);
 
@@ -116,6 +130,111 @@ class ActivityRepo {
           .take(limit)
           .toList(),
     );
+  }
+
+  /// The Home dashboard's Due very soon list: not submitted, has a
+  /// deadline, earliest first — so overdue items come first. Unlike
+  /// [watchUpcoming], past deadlines are included.
+  Stream<List<UpcomingActivity>> watchDueSoon(int semesterId, {int limit = 3}) {
+    final query =
+        db.select(db.activities).join([
+            innerJoin(
+              db.subjects,
+              db.subjects.id.equalsExp(db.activities.subjectId),
+            ),
+          ])
+          ..where(
+            db.subjects.semesterId.equals(semesterId) &
+                db.activities.isArchived.equals(false) &
+                db.activities.deadline.isNotNull() &
+                db.activities.status.isNotIn(const ['submitted']),
+          )
+          ..orderBy([OrderingTerm.asc(db.activities.deadline)]);
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (row) => UpcomingActivity(
+              activity: row.readTable(db.activities),
+              subjectName: row.readTable(db.subjects).name,
+            ),
+          )
+          .take(limit)
+          .toList(),
+    );
+  }
+
+  /// Undone activity counts per status inside a semester, for the Home
+  /// dashboard's segmented bar. Archived activities are not counted.
+  Stream<Map<String, int>> watchStatusCounts(int semesterId) {
+    final count = db.activities.id.count();
+    final query =
+        db.select(db.activities).join([
+            innerJoin(
+              db.subjects,
+              db.subjects.id.equalsExp(db.activities.subjectId),
+            ),
+          ])
+          ..where(
+            db.subjects.semesterId.equals(semesterId) &
+                db.activities.isArchived.equals(false),
+          )
+          ..addColumns([count])
+          ..groupBy([db.activities.status]);
+    return query.watch().map(
+      (rows) => {
+        for (final row in rows)
+          row.readTable(db.activities).status: row.read(count) ?? 0,
+      },
+    );
+  }
+
+  /// Every activity in a semester (across subjects) for the All activities
+  /// screen, with the subject's name and per-activity counts.
+  Stream<List<SemesterActivityItem>> watchAllInSemester(int semesterId) {
+    final fileCount = db.files.id.count(distinct: true);
+    final latestVersion = db.commits.versionNo.max();
+    final query =
+        db.select(db.activities).join([
+            innerJoin(
+              db.subjects,
+              db.subjects.id.equalsExp(db.activities.subjectId),
+            ),
+            leftOuterJoin(
+              db.files,
+              db.files.activityId.equalsExp(db.activities.id),
+            ),
+            leftOuterJoin(db.commits, db.commits.fileId.equalsExp(db.files.id)),
+          ])
+          ..where(
+            db.subjects.semesterId.equals(semesterId) &
+                db.activities.isArchived.equals(false),
+          )
+          ..addColumns([fileCount, latestVersion])
+          ..groupBy([db.activities.id]);
+    return query.watch().map((rows) {
+      final items = rows
+          .map(
+            (row) => SemesterActivityItem(
+              activity: row.readTable(db.activities),
+              subjectName: row.readTable(db.subjects).name,
+              fileCount: row.read(fileCount) ?? 0,
+              latestVersion: row.read(latestVersion),
+            ),
+          )
+          .toList();
+      // Deadlines first (earliest on top), everything without one last.
+      items.sort((a, b) {
+        final da = a.activity.deadline;
+        final dbv = b.activity.deadline;
+        if (da == null && dbv == null) {
+          return b.activity.id.compareTo(a.activity.id);
+        }
+        if (da == null) return 1;
+        if (dbv == null) return -1;
+        return da.compareTo(dbv);
+      });
+      return items;
+    });
   }
 
   Future<int> create({

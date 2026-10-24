@@ -72,7 +72,7 @@ void main() {
     await _close(db, tester);
   });
 
-  testWidgets('log in with any credentials opens choose semester', (
+  testWidgets('log in with any credentials opens the home dashboard', (
     tester,
   ) async {
     final db = await _pumpApp(tester);
@@ -83,8 +83,10 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Log in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose semester'), findsOneWidget);
-    expect(find.text('Signed in as maria@school.edu'), findsOneWidget);
+    expect(find.text('Welcome,'), findsOneWidget);
+    expect(find.text('No semester yet'), findsOneWidget);
+    expect(find.text('Semesters'), findsOneWidget);
+    expect(find.text('Start here'), findsOneWidget);
     await _close(db, tester);
   });
 
@@ -172,7 +174,7 @@ void main() {
     await _close(db, tester);
   });
 
-  testWidgets('success lands on choose semester', (tester) async {
+  testWidgets('success lands on the home dashboard', (tester) async {
     _tallView(tester);
     final db = await _pumpApp(tester, initialLocation: '/signup');
 
@@ -185,7 +187,7 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose semester'), findsOneWidget);
+    expect(find.text('Welcome,'), findsOneWidget);
     await _close(db, tester);
   });
 

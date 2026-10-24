@@ -10,12 +10,22 @@ import 'package:subtrack/core/hashing.dart';
 /// name carries no extension, extensions live in `commits.mime_type` and the
 /// file's display name.
 class BlobStore {
-  BlobStore(Future<Directory> root) : _root = root;
+  /// Tests pass a real temp directory; a missing [root] resolves the app
+  /// documents folder on first use instead of at construction, so simply
+  /// building the store is safe in widget tests where the platform
+  /// channels do not run (view-only flows like file lists keep working).
+  BlobStore([Future<Directory>? root]) : _override = root;
 
-  /// Real app storage; tests pass a temp directory instead.
-  BlobStore.app() : _root = getApplicationDocumentsDirectory();
+  final Future<Directory>? _override;
+  Future<Directory>? _cached;
 
-  final Future<Directory> _root;
+  Future<Directory> get _root {
+    final override = _override;
+    if (override != null) {
+      return override;
+    }
+    return _cached ??= getApplicationDocumentsDirectory();
+  }
 
   Future<Directory> _blobsDir() async {
     final root = await _root;

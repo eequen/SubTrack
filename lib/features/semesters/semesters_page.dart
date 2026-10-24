@@ -128,7 +128,7 @@ class SemestersPage extends ConsumerWidget {
                               await ref
                                   .read(selectedSemesterProvider.notifier)
                                   .select(s.id);
-                              if (context.mounted) context.go('/subjects');
+                              if (context.mounted) context.go('/home');
                             },
                           ),
                         );
