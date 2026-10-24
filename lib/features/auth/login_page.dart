@@ -18,7 +18,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _busy = false;
+  bool _passwordVisible = false;
   String? _error;
+
+  /// Any edit clears a previous error so the form looks clean while the
+  /// student fixes what was wrong.
+  void _clearError() {
+    if (_error != null) {
+      setState(() => _error = null);
+    }
+  }
 
   @override
   void dispose() {
@@ -90,18 +99,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               controller: _identifierController,
               autocorrect: false,
               enableSuggestions: false,
-              onSubmitted: (_) => _submit(),
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
             ),
             const SizedBox(height: 16),
             Text('Password', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: !_passwordVisible,
+              onChanged: (_) => _clearError(),
               onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _passwordVisible = !_passwordVisible),
+                  icon: Icon(
+                    _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                ),
+              ),
             ),
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: AppColors.overdue)),
               const SizedBox(height: 8),
             ],
             ElevatedButton(

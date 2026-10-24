@@ -11,6 +11,7 @@ abstract final class AppColors {
 
   static const deadlineText = Color(0xFF9A5B00);
   static const deadlineBg = Color(0xFFFFF1D6);
+  static const overdue = Color(0xFFB42318);
 
   static const draftText = Color(0xFF444B66);
   static const draftBg = Color(0xFFECEEF5);
