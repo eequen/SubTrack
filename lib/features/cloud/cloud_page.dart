@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/backup_repo.dart';
 import 'package:subtrack/data/repositories/cloud_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/backup/backup_providers.dart';
 import 'package:subtrack/features/cloud/cloud_providers.dart';
+import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 
 /// Screen 10 from AGENTS.md section 14: Cloud backup.
@@ -34,35 +36,22 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   bool _cancelRequested = false;
   String? _progressText;
 
-  /// Screen 10 settings; defaults per AGENTS.md (Wi-Fi only on, older
-  /// versions off).
-  bool _wifiOnly = true;
-  bool _includeOlder = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final prefs = ref.read(sharedPreferencesProvider);
-    _wifiOnly = prefs.getBool('subtrack_backup_wifi_only') ?? true;
-    _includeOlder = prefs.getBool('subtrack_include_older_versions') ?? false;
-  }
-
   bool get _busy => _backingUp || _restoring;
 
   String _mb(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
 
-  void _setWifiOnly(bool value) {
-    setState(() => _wifiOnly = value);
-    ref
-        .read(sharedPreferencesProvider)
-        .setBool('subtrack_backup_wifi_only', value);
+  /// Screen 10 settings live on the local profile row now (AGENTS.md
+  /// section 8), so each account keeps its own.
+  Future<void> _setWifiOnly(DbProfile row, bool value) async {
+    await ref
+        .read(profileRepoProvider)
+        .save(row.copyWith(wifiOnlyBackup: value));
   }
 
-  void _setIncludeOlder(bool value) {
-    setState(() => _includeOlder = value);
-    ref
-        .read(sharedPreferencesProvider)
-        .setBool('subtrack_include_older_versions', value);
+  Future<void> _setIncludeOlder(DbProfile row, bool value) async {
+    await ref
+        .read(profileRepoProvider)
+        .save(row.copyWith(includeOlderVersions: value));
   }
 
   void _snack(String message) {
@@ -75,7 +64,10 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   /// progress and cancel. Honours the Wi-Fi-only setting (constraint 7's
   /// free plan; screen 10).
   Future<void> _backupNow() async {
-    if (_wifiOnly) {
+    final settings = ref.read(profileProvider).value;
+    final wifiOnly = settings?.wifiOnlyBackup ?? true;
+    final includeOlder = settings?.includeOlderVersions ?? false;
+    if (wifiOnly) {
       final networks = await ref.read(connectivityCheckProvider)();
       final onWifi =
           networks.contains(ConnectivityResult.wifi) ||
@@ -110,7 +102,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
               });
             },
             cancelled: () => _cancelRequested,
-            includeOlderVersions: _includeOlder,
+            includeOlderVersions: includeOlder,
           );
       await ref
           .read(sharedPreferencesProvider)
@@ -298,6 +290,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   Widget build(BuildContext context) {
     final email = ref.watch(authControllerProvider)?.email ?? '';
     final prefs = ref.watch(sharedPreferencesProvider);
+    final settings = ref.watch(profileProvider).value;
     final usage = ref.watch(cloudUsageProvider);
     final lastRaw = prefs.getString('subtrack_last_cloud_backup');
     final lastBackup = lastRaw == null
@@ -413,18 +406,22 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                       Row(
                         children: [
                           Checkbox(
-                            value: _wifiOnly,
-                            onChanged: _busy
+                            value: settings?.wifiOnlyBackup ?? true,
+                            onChanged: _busy || settings == null
                                 ? null
-                                : (value) => _setWifiOnly(value ?? true),
+                                : (value) =>
+                                      _setWifiOnly(settings, value ?? true),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: _busy
+                              onTap: _busy || settings == null
                                   ? null
-                                  : () => _setWifiOnly(!_wifiOnly),
+                                  : () => _setWifiOnly(
+                                      settings,
+                                      !settings.wifiOnlyBackup,
+                                    ),
                               child: const Text('Back up on Wi-Fi only'),
                             ),
                           ),
@@ -433,18 +430,24 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                       Row(
                         children: [
                           Checkbox(
-                            value: _includeOlder,
-                            onChanged: _busy
+                            value: settings?.includeOlderVersions ?? false,
+                            onChanged: _busy || settings == null
                                 ? null
-                                : (value) => _setIncludeOlder(value ?? false),
+                                : (value) => _setIncludeOlder(
+                                    settings,
+                                    value ?? false,
+                                  ),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: _busy
+                              onTap: _busy || settings == null
                                   ? null
-                                  : () => _setIncludeOlder(!_includeOlder),
+                                  : () => _setIncludeOlder(
+                                      settings,
+                                      !settings.includeOlderVersions,
+                                    ),
                               child: const Text('Include older versions'),
                             ),
                           ),
