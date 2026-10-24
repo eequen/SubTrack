@@ -18,6 +18,7 @@ class CreateAccountPage extends ConsumerStatefulWidget {
 }
 
 class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
+  final _displayNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -27,6 +28,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
 
   @override
   void dispose() {
+    _displayNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -35,6 +37,10 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   }
 
   String? _validate() {
+    final displayName = _displayNameController.text.trim();
+    if (displayName.isEmpty || displayName.length > 30) {
+      return 'Enter your display name (30 characters max).';
+    }
     final uname = normalizeUsername(_usernameController.text);
     if (!usernamePattern.hasMatch(uname)) {
       return 'Usernames use 3-20 letters, numbers, or underscores and start '
@@ -43,8 +49,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
     if (!_emailPattern.hasMatch(_emailController.text.trim())) {
       return 'Enter a valid email address.';
     }
-    if (_passwordController.text.length < 6) {
-      return 'Passwords need at least 6 characters.';
+    if (_passwordController.text.length < 8) {
+      return 'Passwords need at least 8 characters.';
     }
     if (_confirmController.text != _passwordController.text) {
       return 'Passwords do not match.';
@@ -67,6 +73,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
       await auth.signUp(
         email: _emailController.text.trim(),
         username: _usernameController.text,
+        displayName: _displayNameController.text,
         password: _passwordController.text,
       );
       if (mounted) context.go('/semesters');
@@ -99,6 +106,14 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
             ),
             const SizedBox(height: 24),
+            Text('Display name', style: textTheme.labelLarge),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _displayNameController,
+              autocorrect: false,
+              enableSuggestions: false,
+            ),
+            const SizedBox(height: 16),
             Text('Username', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(

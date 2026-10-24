@@ -36,6 +36,7 @@ abstract class AuthService {
   Future<void> signUp({
     required String email,
     required String username,
+    required String displayName,
     required String password,
   });
 
@@ -82,6 +83,7 @@ class FakeAuthService implements AuthService {
   Future<void> signUp({
     required String email,
     required String username,
+    required String displayName,
     required String password,
   }) => _authenticate(email, password);
 

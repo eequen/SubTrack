@@ -12,7 +12,7 @@ import 'package:subtrack/features/semesters/new_semester_page.dart';
 import 'package:subtrack/features/semesters/semesters_page.dart';
 import 'package:subtrack/features/subjects/subjects_page.dart';
 
-/// Routes from AGENTS.md section 14 (plus the separate create-account
+/// Routes from AGENTS.md section 14 (including the `/signup` create-account
 /// screen).
 ///
 /// Signed-out users are redirected to `/login` (the create-account screen
@@ -24,7 +24,7 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
     initialLocation: initialLocation ?? '/login',
     redirect: (context, state) {
       final atLogin = state.matchedLocation == '/login';
-      final atCreate = state.matchedLocation == '/create-account';
+      final atCreate = state.matchedLocation == '/signup';
       final atAuth = atLogin || atCreate;
       if (!isSignedIn && !atAuth) return '/login';
       if (isSignedIn && atAuth) return '/semesters';
@@ -33,7 +33,7 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
-        path: '/create-account',
+        path: '/signup',
         builder: (context, state) => const CreateAccountPage(),
       ),
       GoRoute(
