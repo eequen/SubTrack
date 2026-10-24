@@ -32,8 +32,8 @@ String authErrorMessage(Object error) {
     if (message.contains('rate limit') || message.contains('too many')) {
       return 'Too many attempts. Try again in a minute.';
     }
-    if (message.contains('at least 6') || message.contains('least 6')) {
-      return 'Passwords need at least 6 characters.';
+    if (message.contains('least 6') || message.contains('least 8')) {
+      return 'Passwords need at least 8 characters.';
     }
     if (message.contains('database error saving new user')) {
       return 'Could not create the account. The username may be taken — '
@@ -122,6 +122,7 @@ class SupabaseAuthService implements AuthService {
   Future<void> signUp({
     required String email,
     required String username,
+    required String displayName,
     required String password,
   }) async {
     final uname = normalizeUsername(username);
@@ -131,21 +132,25 @@ class SupabaseAuthService implements AuthService {
         'with a letter.',
       );
     }
+    final trimmedName = displayName.trim();
+    if (trimmedName.isEmpty || trimmedName.length > 30) {
+      throw const AuthException('Enter your display name (30 characters max).');
+    }
     final trimmedEmail = email.trim();
     if (trimmedEmail.isEmpty || !trimmedEmail.contains('@')) {
       throw const AuthException('Enter a valid email address.');
     }
-    if (password.length < 6) {
-      throw const AuthException('Passwords need at least 6 characters.');
+    if (password.length < 8) {
+      throw const AuthException('Passwords need at least 8 characters.');
     }
     await _guard(() => _checkUsernameFree(uname));
     await _guard(
       () => _client.auth.signUp(
         email: trimmedEmail,
         password: password,
-        // The on_auth_user_created trigger (docs/supabase_schema_profiles.sql)
-        // copies this into the profiles table.
-        data: {'username': uname},
+        // The on_auth_user_created trigger copies username and display
+        // name into the profiles table (docs/supabase_schema_*.sql).
+        data: {'username': uname, 'display_name': trimmedName},
       ),
     );
     // When email confirmation is still enabled, sign-up returns no session.

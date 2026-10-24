@@ -59,9 +59,15 @@ class AuthController extends Notifier<AppUser?> {
   Future<void> signUp({
     required String email,
     required String username,
+    required String displayName,
     required String password,
   }) async {
-    await _service.signUp(email: email, username: username, password: password);
+    await _service.signUp(
+      email: email,
+      username: username,
+      displayName: displayName,
+      password: password,
+    );
     state = _service.currentUser;
   }
 

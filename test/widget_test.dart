@@ -110,6 +110,7 @@ void main() {
     await tester.tap(find.widgetWithText(OutlinedButton, 'Create account'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Display name'), findsOneWidget);
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
@@ -125,13 +126,14 @@ void main() {
     tester,
   ) async {
     _tallView(tester);
-    final db = await _pumpApp(tester, initialLocation: '/create-account');
+    final db = await _pumpApp(tester, initialLocation: '/signup');
 
     final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'maria_01');
-    await tester.enterText(fields.at(1), 'maria@school.edu');
-    await tester.enterText(fields.at(2), 'secret123');
-    await tester.enterText(fields.at(3), 'secret124');
+    await tester.enterText(fields.at(0), 'Maria Reyes');
+    await tester.enterText(fields.at(1), 'maria_01');
+    await tester.enterText(fields.at(2), 'maria@school.edu');
+    await tester.enterText(fields.at(3), 'secret123');
+    await tester.enterText(fields.at(4), 'secret124');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
@@ -140,15 +142,16 @@ void main() {
     await _close(db, tester);
   });
 
-  testWidgets('successful sign up lands on choose semester', (tester) async {
+  testWidgets('success lands on choose semester', (tester) async {
     _tallView(tester);
-    final db = await _pumpApp(tester, initialLocation: '/create-account');
+    final db = await _pumpApp(tester, initialLocation: '/signup');
 
     final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'maria_01');
-    await tester.enterText(fields.at(1), 'maria@school.edu');
-    await tester.enterText(fields.at(2), 'secret123');
+    await tester.enterText(fields.at(0), 'Maria Reyes');
+    await tester.enterText(fields.at(1), 'maria_01');
+    await tester.enterText(fields.at(2), 'maria@school.edu');
     await tester.enterText(fields.at(3), 'secret123');
+    await tester.enterText(fields.at(4), 'secret123');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
@@ -160,17 +163,35 @@ void main() {
     tester,
   ) async {
     _tallView(tester);
-    final db = await _pumpApp(tester, initialLocation: '/create-account');
+    final db = await _pumpApp(tester, initialLocation: '/signup');
 
     final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'no!');
-    await tester.enterText(fields.at(1), 'maria@school.edu');
-    await tester.enterText(fields.at(2), 'secret123');
+    await tester.enterText(fields.at(0), 'Maria Reyes');
+    await tester.enterText(fields.at(1), 'no!');
+    await tester.enterText(fields.at(2), 'maria@school.edu');
     await tester.enterText(fields.at(3), 'secret123');
+    await tester.enterText(fields.at(4), 'secret123');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Usernames use 3-20'), findsOneWidget);
+    await _close(db, tester);
+  });
+
+  testWidgets('short passwords are rejected on create account', (tester) async {
+    _tallView(tester);
+    final db = await _pumpApp(tester, initialLocation: '/signup');
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Maria Reyes');
+    await tester.enterText(fields.at(1), 'maria_01');
+    await tester.enterText(fields.at(2), 'maria@school.edu');
+    await tester.enterText(fields.at(3), 'abc');
+    await tester.enterText(fields.at(4), 'abc');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Passwords need at least 8 characters.'), findsOneWidget);
     await _close(db, tester);
   });
 }

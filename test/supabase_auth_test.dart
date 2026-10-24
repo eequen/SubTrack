@@ -42,7 +42,7 @@ void main() {
           'Password should be at least 6 characters.',
         ),
       );
-      expect(message, 'Passwords need at least 6 characters.');
+      expect(message, 'Passwords need at least 8 characters.');
     });
 
     test('explains a failed account row (username collision)', () {
@@ -167,42 +167,75 @@ void main() {
       expect(auth.currentUser, isNull);
     });
 
-    test('sign-up validates username, email, and password first', () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final auth = service(prefs);
+    test(
+      'sign-up validates name, username, email, and password first',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final auth = service(prefs);
 
-      await expectLater(
-        auth.signUp(email: 'm@x.io', username: 'no!', password: 'secret123'),
-        throwsA(
-          isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            contains('Usernames use 3-20'),
+        await expectLater(
+          auth.signUp(
+            email: 'm@x.io',
+            username: 'maria',
+            displayName: '   ',
+            password: 'secret123',
           ),
-        ),
-      );
-      await expectLater(
-        auth.signUp(email: 'not-an-email', username: 'maria', password: 'a'),
-        throwsA(
-          isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            'Enter a valid email address.',
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('Enter your display name'),
+            ),
           ),
-        ),
-      );
-      await expectLater(
-        auth.signUp(email: 'm@x.io', username: 'maria', password: ''),
-        throwsA(
-          isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            'Passwords need at least 6 characters.',
+        );
+        await expectLater(
+          auth.signUp(
+            email: 'm@x.io',
+            username: 'no!',
+            displayName: 'Maria',
+            password: 'secret123',
           ),
-        ),
-      );
-      expect(auth.currentUser, isNull);
-    });
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('Usernames use 3-20'),
+            ),
+          ),
+        );
+        await expectLater(
+          auth.signUp(
+            email: 'not-an-email',
+            username: 'maria',
+            displayName: 'Maria',
+            password: 'secret123',
+          ),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              'Enter a valid email address.',
+            ),
+          ),
+        );
+        await expectLater(
+          auth.signUp(
+            email: 'm@x.io',
+            username: 'maria',
+            displayName: 'Maria',
+            password: 'safe123',
+          ),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              'Passwords need at least 8 characters.',
+            ),
+          ),
+        );
+        expect(auth.currentUser, isNull);
+      },
+    );
   });
 }

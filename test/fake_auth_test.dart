@@ -35,13 +35,14 @@ void main() {
     expect(auth.currentUser, isNull);
   });
 
-  test('signUp takes a username and email', () async {
+  test('signUp takes a display name, username, and email', () async {
     final auth = await _service();
 
     await auth.signUp(
       email: 'maria@school.edu',
       username: 'maria_01',
-      password: 'secret',
+      displayName: 'Maria',
+      password: 'secret123',
     );
     expect(auth.currentUser?.email, 'maria@school.edu');
   });

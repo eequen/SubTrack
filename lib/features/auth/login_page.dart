@@ -100,22 +100,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               obscureText: true,
               onSubmitted: (_) => _submit(),
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Password reset is not available yet. Account '
-                        'recovery comes after the defense.',
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Forgot password?'),
-              ),
-            ),
             if (_error != null) ...[
               Text(_error!, style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 8),
@@ -126,7 +110,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: _busy ? null : () => context.go('/create-account'),
+              onPressed: _busy ? null : () => context.go('/signup'),
               child: const Text('Create account'),
             ),
             const SizedBox(height: 16),
