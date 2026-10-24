@@ -101,6 +101,36 @@ void main() {
     await _close(db, tester);
   });
 
+  testWidgets('password visibility toggles on login', (tester) async {
+    final db = await _pumpApp(tester);
+
+    TextField passwordField() =>
+        tester.widget<TextField>(find.byType(TextField).last);
+    expect(passwordField().obscureText, isTrue);
+
+    await tester.tap(find.byIcon(Icons.visibility));
+    await tester.pump();
+
+    expect(passwordField().obscureText, isFalse);
+    await _close(db, tester);
+  });
+
+  testWidgets('editing a field clears the previous error on login', (
+    tester,
+  ) async {
+    final db = await _pumpApp(tester);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Log in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your email or username.'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'maria');
+    await tester.pump();
+
+    expect(find.text('Enter your email or username.'), findsNothing);
+    await _close(db, tester);
+  });
+
   testWidgets('create account button opens the create-account screen', (
     tester,
   ) async {

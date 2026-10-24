@@ -24,7 +24,17 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _busy = false;
+  bool _passwordVisible = false;
+  bool _confirmVisible = false;
   String? _error;
+
+  /// Any edit clears a previous error so the form looks clean while the
+  /// student fixes what was wrong.
+  void _clearError() {
+    if (_error != null) {
+      setState(() => _error = null);
+    }
+  }
 
   @override
   void dispose() {
@@ -112,6 +122,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               controller: _displayNameController,
               autocorrect: false,
               enableSuggestions: false,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
             ),
             const SizedBox(height: 16),
             Text('Username', style: textTheme.labelLarge),
@@ -120,6 +132,8 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               controller: _usernameController,
               autocorrect: false,
               enableSuggestions: false,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
             ),
             const SizedBox(height: 4),
             Text(
@@ -134,22 +148,48 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               enableSuggestions: false,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
             ),
             const SizedBox(height: 16),
             Text('Password', style: textTheme.labelLarge),
             const SizedBox(height: 6),
-            TextField(controller: _passwordController, obscureText: true),
+            TextField(
+              controller: _passwordController,
+              obscureText: !_passwordVisible,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _passwordVisible = !_passwordVisible),
+                  icon: Icon(
+                    _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
             Text('Confirm password', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
               controller: _confirmController,
-              obscureText: true,
+              obscureText: !_confirmVisible,
+              onChanged: (_) => _clearError(),
               onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _confirmVisible = !_confirmVisible),
+                  icon: Icon(
+                    _confirmVisible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                ),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: const TextStyle(color: AppColors.overdue)),
             ],
             const SizedBox(height: 16),
             ElevatedButton(
