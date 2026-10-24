@@ -53,3 +53,7 @@ app.*.map.json
 android/key.properties
 *.jks
 *.keystore
+
+# Local Supabase keys (copy docs/config.example.json to config.json and
+# fill it in; never commit the real file)
+config.json
