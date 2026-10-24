@@ -86,7 +86,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
         displayName: _displayNameController.text,
         password: _passwordController.text,
       );
-      if (mounted) context.go('/semesters');
+      if (mounted) context.go('/home');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } finally {

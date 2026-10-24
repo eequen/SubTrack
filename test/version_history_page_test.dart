@@ -37,6 +37,14 @@ class _Setup {
 /// Real file I/O (temp dirs, blob writes) never completes inside the fake
 /// widget-test zone, so all prep runs via [WidgetTester.runAsync].
 Future<_Setup> _setup(WidgetTester tester) async {
+  // A tall surface: version history now lives inside the navigation shell
+  // (AGENTS.md 14), and the bottom bar shrinks the page enough that list
+  // items near the bottom would lazy-build offscreen otherwise.
+  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   final setup = await tester.runAsync(() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

@@ -61,7 +61,7 @@ class _NewSemesterPageState extends ConsumerState<NewSemesterPage> {
             endDate: _end,
           );
       await ref.read(selectedSemesterProvider.notifier).select(id);
-      if (mounted) context.go('/subjects');
+      if (mounted) context.go('/home');
     } on ArgumentError catch (e) {
       setState(() => _error = e.message);
     } finally {

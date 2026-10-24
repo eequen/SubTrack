@@ -47,7 +47,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         identifier: _identifierController.text,
         password: _passwordController.text,
       );
-      if (mounted) context.go('/semesters');
+      if (mounted) context.go('/home');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } finally {

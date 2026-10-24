@@ -9,7 +9,7 @@ import 'package:subtrack/features/files/file_pick.dart';
 
 /// Content-addressed blobs live outside the per-user database, shared safely
 /// across accounts on the device (identical content is identical everywhere).
-final blobStoreProvider = Provider<BlobStore>((_) => BlobStore.app());
+final blobStoreProvider = Provider<BlobStore>((_) => BlobStore());
 
 final fileRepoProvider = Provider<FileRepo>((ref) {
   return FileRepo(ref.watch(databaseProvider), ref.watch(blobStoreProvider));
