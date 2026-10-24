@@ -57,3 +57,6 @@ android/key.properties
 # Local Supabase keys (copy docs/config.example.json to config.json and
 # fill it in; never commit the real file)
 config.json
+
+# Agent tooling state, not part of the project
+.brud/
