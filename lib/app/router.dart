@@ -5,6 +5,7 @@ import 'package:subtrack/features/activities/activities_page.dart';
 import 'package:subtrack/features/auth/create_account_page.dart';
 import 'package:subtrack/features/auth/login_page.dart';
 import 'package:subtrack/features/cloud/cloud_page.dart';
+import 'package:subtrack/features/dashboard/calendar_page.dart';
 import 'package:subtrack/features/dashboard/home_page.dart';
 import 'package:subtrack/features/files/activity_files_page.dart';
 import 'package:subtrack/features/history/commit_page.dart';
@@ -101,6 +102,10 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
                 builder: (context, state) => ActivityFilesPage(
                   activityId: state.pathParameters['activityId'] ?? '',
                 ),
+              ),
+              GoRoute(
+                path: '/calendar',
+                builder: (context, state) => const CalendarPage(),
               ),
               GoRoute(
                 path: '/files/:fileId/history',
