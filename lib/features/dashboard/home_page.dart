@@ -356,9 +356,8 @@ class _QuickAccess extends StatelessWidget {
           child: QuickAccessTile(
             icon: Icons.calendar_month_outlined,
             label: 'Calendar',
-            // The calendar screen lands in the next task.
-            enabled: false,
-            onTap: () {},
+            enabled: !isNewUser,
+            onTap: () => context.go('/calendar'),
           ),
         ),
       ],

@@ -163,6 +163,35 @@ class ActivityRepo {
     );
   }
 
+  /// Every non-archived activity with a deadline in [semesterId], earliest
+  /// first. The calendar needs the whole set to mark days and list a chosen
+  /// day's activities, so past and submitted items stay visible too.
+  Stream<List<UpcomingActivity>> watchDeadlinesInSemester(int semesterId) {
+    final query =
+        db.select(db.activities).join([
+            innerJoin(
+              db.subjects,
+              db.subjects.id.equalsExp(db.activities.subjectId),
+            ),
+          ])
+          ..where(
+            db.subjects.semesterId.equals(semesterId) &
+                db.activities.isArchived.equals(false) &
+                db.activities.deadline.isNotNull(),
+          )
+          ..orderBy([OrderingTerm.asc(db.activities.deadline)]);
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (row) => UpcomingActivity(
+              activity: row.readTable(db.activities),
+              subjectName: row.readTable(db.subjects).name,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   /// Undone activity counts per status inside a semester, for the Home
   /// dashboard's segmented bar. Archived activities are not counted.
   Stream<Map<String, int>> watchStatusCounts(int semesterId) {
