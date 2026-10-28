@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/core/avatar.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 
@@ -48,14 +48,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final documents = await getApplicationDocumentsDirectory();
       final avatars = Directory('${documents.path}/avatars');
       await avatars.create(recursive: true);
-      final extension = p.extension(picked.path);
       final file = File(
-        '${avatars.path}/${user.id}${extension.isEmpty ? '.jpg' : extension}',
+        '${avatars.path}/${avatarFileName(user.id, picked.path)}',
       );
       await file.writeAsBytes(await picked.readAsBytes(), flush: true);
+      final previous = ref.read(profileProvider).value?.avatarPath;
       await ref
           .read(profileRepoProvider)
           .update(user.id, avatarPath: file.path);
+      // Each pick has its own file, so the old one can go; deleting it also
+      // keeps the avatars folder from growing.
+      await _deleteAvatar(previous, keep: file.path);
     } catch (e) {
       if (mounted) _snack('Could not save the photo: $e');
     } finally {
@@ -69,16 +72,26 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _busy = true);
     try {
       final path = ref.read(profileProvider).value?.avatarPath;
-      if (path != null && path.isNotEmpty) {
-        final file = File(path);
-        if (await file.exists()) await file.delete();
-      }
+      await _deleteAvatar(path, keep: '');
       await ref.read(profileRepoProvider).update(user.id, clearAvatar: true);
     } catch (e) {
       if (mounted) _snack('Could not remove the photo: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Deletes an old avatar file and drops its cached decode so a new photo
+  /// is not hidden behind the previous image (Flutter caches by path).
+  Future<void> _deleteAvatar(String? path, {required String keep}) async {
+    if (path == null || path.isEmpty || path == keep) return;
+    final old = File(path);
+    try {
+      if (await old.exists()) await old.delete();
+    } catch (_) {
+      // A missing or locked file must not block the new photo.
+    }
+    await FileImage(old).evict();
   }
 
   Future<void> _save() async {
