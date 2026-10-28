@@ -41,6 +41,10 @@ abstract class AuthService {
   });
 
   Future<void> signOut();
+
+  /// Changes the signed-in account's password (Profile > Change password).
+  /// The saved session proves the identity, so no old password is asked.
+  Future<void> changePassword({required String newPassword});
 }
 
 /// Development stand-in for Supabase auth. Accepts any non-empty
@@ -91,5 +95,14 @@ class FakeAuthService implements AuthService {
   Future<void> signOut() async {
     await prefs.remove(_sessionKey);
     _currentUser = null;
+  }
+
+  @override
+  Future<void> changePassword({required String newPassword}) async {
+    // The fake accepts any password at sign-in, so only the shared rule
+    // (at least 8 characters) can be checked here.
+    if (newPassword.length < 8) {
+      throw const AuthException('Passwords need at least 8 characters.');
+    }
   }
 }

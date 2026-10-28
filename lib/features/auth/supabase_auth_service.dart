@@ -171,6 +171,16 @@ class SupabaseAuthService implements AuthService {
     _currentUser = null;
   }
 
+  @override
+  Future<void> changePassword({required String newPassword}) async {
+    if (newPassword.length < 8) {
+      throw const AuthException('Passwords need at least 8 characters.');
+    }
+    await _guard(
+      () => _client.auth.updateUser(supa.UserAttributes(password: newPassword)),
+    );
+  }
+
   /// Asks the cloud for the email behind [username]; null means nobody
   /// registered it. The profiles table is world-readable on purpose so a
   /// signed-out phone can look usernames up.

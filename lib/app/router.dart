@@ -10,6 +10,7 @@ import 'package:subtrack/features/dashboard/home_page.dart';
 import 'package:subtrack/features/files/activity_files_page.dart';
 import 'package:subtrack/features/history/commit_page.dart';
 import 'package:subtrack/features/history/version_history_page.dart';
+import 'package:subtrack/features/profile/edit_profile_page.dart';
 import 'package:subtrack/features/profile/profile_page.dart';
 import 'package:subtrack/features/search/search_page.dart';
 import 'package:subtrack/features/semesters/new_semester_page.dart';
@@ -58,6 +59,11 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
         path: '/files/:fileId/commit',
         builder: (context, state) =>
             CommitPage(fileId: state.pathParameters['fileId'] ?? ''),
+      ),
+      // No bottom bar on Edit profile (AGENTS.md section 14).
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfilePage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

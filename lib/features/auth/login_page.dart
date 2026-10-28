@@ -67,28 +67,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Text(
               'SubTrack',
               style: textTheme.headlineLarge?.copyWith(
-                color: AppColors.accent,
+                color: context.palette.accent,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Every subject, every version, safely kept.',
-              style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+              style: textTheme.bodyLarge?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
             const SizedBox(height: 16),
             // First-time users must see where to go (requested change).
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.inProgressBg,
+                color: context.palette.inProgressBg,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 'First time here? Create an account first — the button at '
                 'the end of this screen.',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: AppColors.inProgressText,
+                  color: context.palette.inProgressText,
                 ),
               ),
             ),
@@ -122,7 +124,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: AppColors.overdue)),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
               const SizedBox(height: 8),
             ],
             ElevatedButton(

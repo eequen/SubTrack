@@ -75,6 +75,9 @@ class AuthController extends Notifier<AppUser?> {
     await _service.signOut();
     state = null;
   }
+
+  Future<void> changePassword({required String newPassword}) =>
+      _service.changePassword(newPassword: newPassword);
 }
 
 final authControllerProvider = NotifierProvider<AuthController, AppUser?>(

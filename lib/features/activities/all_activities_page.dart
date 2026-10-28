@@ -74,8 +74,8 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                         ),
                         Text(
                           '${items.length} ${items.length == 1 ? 'activity' : 'activities'}',
-                          style: const TextStyle(
-                            color: AppColors.mutedText,
+                          style: TextStyle(
+                            color: context.palette.mutedText,
                             fontSize: 13,
                           ),
                         ),
@@ -198,7 +198,7 @@ class _AllActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final activity = item.activity;
     return Material(
-      color: AppColors.card,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
@@ -219,8 +219,8 @@ class _AllActivityCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.subjectName,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
                         fontSize: 12,
                       ),
                     ),
@@ -237,15 +237,15 @@ class _AllActivityCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       _filesLabel,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.mutedText),
+              Icon(Icons.chevron_right, color: context.palette.mutedText),
             ],
           ),
         ),

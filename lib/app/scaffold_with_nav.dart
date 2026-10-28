@@ -69,10 +69,12 @@ class QuickAccessTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final decoration = BoxDecoration(
-      color: AppColors.card,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       border: Border.all(
-        color: highlighted ? AppColors.accent : AppColors.cardBorder,
+        color: highlighted
+            ? context.palette.accent
+            : context.palette.cardBorder,
         width: highlighted ? 2 : 1,
       ),
     );
@@ -82,18 +84,21 @@ class QuickAccessTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
       child: Column(
         children: [
-          Icon(icon, color: highlighted ? AppColors.accent : AppColors.text),
+          Icon(
+            icon,
+            color: highlighted ? context.palette.accent : context.palette.text,
+          ),
           const SizedBox(height: 6),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: AppColors.text),
+            style: TextStyle(fontSize: 12, color: context.palette.text),
           ),
           if (highlighted) ...[
             const SizedBox(height: 2),
-            const Text(
+            Text(
               'Start here',
-              style: TextStyle(fontSize: 11, color: AppColors.accent),
+              style: TextStyle(fontSize: 11, color: context.palette.accent),
             ),
           ],
         ],

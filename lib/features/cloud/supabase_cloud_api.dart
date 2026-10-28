@@ -21,6 +21,11 @@ class SupabaseMetadataApi implements CloudMetadataApi {
   Future<List<Map<String, dynamic>>> fetch(String table) async {
     return await _client.from(table).select();
   }
+
+  @override
+  Future<void> deleteRowsFor(String table, String userId) async {
+    await _client.from(table).delete().eq('user_id', userId);
+  }
 }
 
 /// Storage-backed blobs under `<userId>/blobs/<sha256>` in the private
@@ -75,5 +80,18 @@ class SupabaseBlobApi implements CloudBlobApi {
       total += (object.metadata?['size'] as num?)?.toInt() ?? 0;
     }
     return total;
+  }
+
+  @override
+  Future<void> deleteAllBlobs() async {
+    final objects = await _client.storage
+        .from(_bucket)
+        .list(path: '$userId/blobs');
+    if (objects.isEmpty) {
+      return;
+    }
+    await _client.storage.from(_bucket).remove([
+      for (final object in objects) '$userId/blobs/${object.name}',
+    ]);
   }
 }

@@ -142,13 +142,6 @@ class SemestersPage extends ConsumerWidget {
                 onPressed: () => context.go('/semesters/new'),
                 child: const Text('+ New semester'),
               ),
-              TextButton(
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
-                },
-                child: const Text('Sign out'),
-              ),
             ],
           ),
         ),

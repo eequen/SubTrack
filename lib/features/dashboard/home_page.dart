@@ -78,14 +78,14 @@ class HomePage extends ConsumerWidget {
                       Text(
                         isNewUser ? 'Welcome,' : 'Welcome back,',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: AppColors.mutedText,
+                          color: context.palette.mutedText,
                         ),
                       ),
                       Text(
                         displayName,
                         style: textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.text,
+                          color: context.palette.text,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -137,7 +137,7 @@ class _ProfileAvatar extends StatelessWidget {
       onTap: () => context.go('/profile'),
       child: CircleAvatar(
         radius: 22,
-        backgroundColor: AppColors.accent,
+        backgroundColor: context.palette.accent,
         foregroundImage: profilePath == null || profilePath!.isEmpty
             ? null
             : FileImage(File(profilePath!)),
@@ -164,10 +164,14 @@ class _SemesterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = this.current;
     final (bg, fg, label) = isNewUser || current == null
-        ? (AppColors.deadlineBg, AppColors.deadlineText, 'No semester yet')
+        ? (
+            context.palette.deadlineBg,
+            context.palette.deadlineText,
+            'No semester yet',
+          )
         : (
-            AppColors.inProgressBg,
-            AppColors.inProgressText,
+            context.palette.inProgressBg,
+            context.palette.inProgressText,
             '${semesterLabel(current.semester.term)} - SY '
                 '${current.semester.schoolYear}',
           );
@@ -235,15 +239,15 @@ class _DueSoonSection extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: context.palette.card,
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              border: Border.all(color: AppColors.cardBorder),
+              border: Border.all(color: context.palette.cardBorder),
             ),
             child: Text(
               isNewUser
                   ? 'No deadlines. Add a semester first.'
                   : 'Nothing due soon.',
-              style: const TextStyle(color: AppColors.mutedText),
+              style: TextStyle(color: context.palette.mutedText),
             ),
           )
         else
@@ -264,10 +268,12 @@ class _DueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overdue = isOverdue(item.activity.deadline);
-    final dueColor = overdue ? AppColors.overdue : AppColors.deadlineText;
+    final dueColor = overdue
+        ? context.palette.overdue
+        : context.palette.deadlineText;
 
     return Material(
-      color: AppColors.card,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
@@ -282,17 +288,17 @@ class _DueCard extends StatelessWidget {
                   children: [
                     Text(
                       item.activity.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.text,
+                        color: context.palette.text,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.subjectName,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
                         fontSize: 12,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -365,25 +371,27 @@ class _QuickAccess extends StatelessWidget {
   }
 }
 
+/// Status chip colors for the legend (independent of the accent).
+List<(String, String, Color)> _statusLegend(AppPalette palette) => [
+  ('draft', 'Draft', palette.draftText),
+  ('in_progress', 'In progress', palette.inProgressText),
+  ('final', 'Final', palette.finalText),
+  ('submitted', 'Submitted', palette.submittedText),
+];
+
 /// This-semester progress: a segmented bar and per-status counts.
 class _ThisSemesterSection extends ConsumerWidget {
   const _ThisSemesterSection();
-
-  static const _legend = <(String, String, Color)>[
-    ('draft', 'Draft', AppColors.draftText),
-    ('in_progress', 'In progress', AppColors.inProgressText),
-    ('final', 'Final', AppColors.finalText),
-    ('submitted', 'Submitted', AppColors.submittedText),
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final counts =
         ref.watch(statusCountsProvider).value ?? const <String, int>{};
     final total = counts.values.fold(0, (sum, n) => sum + n);
+    final legend = _statusLegend(context.palette);
 
     return Material(
-      color: AppColors.card,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
@@ -406,8 +414,8 @@ class _ThisSemesterSection extends ConsumerWidget {
                   ),
                   Text(
                     total == 1 ? '1 activity' : '$total activities',
-                    style: const TextStyle(
-                      color: AppColors.mutedText,
+                    style: TextStyle(
+                      color: context.palette.mutedText,
                       fontSize: 13,
                     ),
                   ),
@@ -418,7 +426,7 @@ class _ThisSemesterSection extends ConsumerWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  for (final (status, label, color) in _legend) ...[
+                  for (final (status, label, color) in legend) ...[
                     if (status != 'draft') const SizedBox(width: 6),
                     Expanded(
                       child: _LegendEntry(
@@ -445,7 +453,7 @@ class _SegmentedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final segments = _ThisSemesterSection._legend
+    final segments = _statusLegend(context.palette)
         .map((entry) => (entry.$3, counts[entry.$1] ?? 0))
         .where((segment) => segment.$2 > 0)
         .toList();
@@ -454,7 +462,7 @@ class _SegmentedBar extends StatelessWidget {
       return Container(
         height: 8,
         decoration: BoxDecoration(
-          color: AppColors.draftBg,
+          color: context.palette.draftBg,
           borderRadius: BorderRadius.circular(999),
         ),
       );
@@ -507,9 +515,9 @@ class _LegendEntry extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.mutedText,
+                    color: context.palette.mutedText,
                   ),
                 ),
               ),
@@ -522,10 +530,10 @@ class _LegendEntry extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: AppColors.text,
+                color: context.palette.text,
               ),
             ),
           ],
@@ -547,25 +555,28 @@ class _FirstSemesterCard extends StatelessWidget {
         onTap: () => context.push('/semesters'),
         child: CustomPaint(
           painter: _DashedPainter(
-            color: AppColors.accent.withValues(alpha: 0.6),
+            color: context.palette.accent.withValues(alpha: 0.6),
           ),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 24),
             width: double.infinity,
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.add, color: AppColors.accent),
+                Icon(Icons.add, color: context.palette.accent),
                 SizedBox(height: 6),
                 Text(
                   'Add your first semester',
                   style: TextStyle(
-                    color: AppColors.accent,
+                    color: context.palette.accent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   'Group your subjects by term',
-                  style: TextStyle(color: AppColors.mutedText, fontSize: 12),
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
