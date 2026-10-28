@@ -28,6 +28,12 @@ class FakeMetadataApi implements CloudMetadataApi {
   @override
   Future<List<Map<String, dynamic>>> fetch(String table) async =>
       fetched[table] ?? const [];
+
+  @override
+  Future<void> deleteRowsFor(String table, String userId) async {
+    rows.remove(table);
+    fetched.remove(table);
+  }
 }
 
 /// Pretends to be the account's blob folder, starting from [existing] and
@@ -70,6 +76,13 @@ class FakeBlobApi implements CloudBlobApi {
 
   @override
   Future<int> usedBytes() async => used;
+
+  @override
+  Future<void> deleteAllBlobs() async {
+    existing.clear();
+    stored.clear();
+    used = 0;
+  }
 }
 
 void main() {

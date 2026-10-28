@@ -2,6 +2,13 @@ import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/data/db/app_database.dart';
 
+/// Accent keys the appearance picker offers. Kept in sync with
+/// [accentOptions] in app/theme.dart; a test checks the two lists match.
+const profileAccentKeys = ['indigo', 'teal', 'orange', 'purple', 'pink'];
+
+/// Theme modes accepted by the profiles table (AGENTS.md section 8).
+const profileThemeModes = ['light', 'dark', 'system'];
+
 /// The local profile row: one per account, inside that account's database
 /// file (AGENTS.md section 8). Keeps display name, avatar, theme, and
 /// notification/backup settings; the avatar never leaves this device.
@@ -58,5 +65,50 @@ class ProfileRepo {
   Future<DbProfile> save(DbProfile row) async {
     await _db.into(_db.profiles).insertOnConflictUpdate(row);
     return row;
+  }
+
+  /// Writes the settings the Profile screen edits. Only the fields passed
+  /// change; [clearAvatar] removes the photo path. Values are validated
+  /// before touching the row so a bad state never reaches the UI.
+  Future<void> update(
+    String userId, {
+    String? displayName,
+    String? avatarPath,
+    bool clearAvatar = false,
+    String? themeMode,
+    String? accentKey,
+    bool? remindDeadlines,
+    bool? remindBackupWeekly,
+  }) async {
+    final name = displayName?.trim();
+    if (displayName != null && (name!.isEmpty || name.length > 30)) {
+      throw ArgumentError('Display names use 1-30 characters.');
+    }
+    if (themeMode != null && !profileThemeModes.contains(themeMode)) {
+      throw ArgumentError('Unknown theme mode: $themeMode');
+    }
+    if (accentKey != null && !profileAccentKeys.contains(accentKey)) {
+      throw ArgumentError('Unknown accent: $accentKey');
+    }
+    await (_db.update(
+      _db.profiles,
+    )..where((tbl) => tbl.userId.equals(userId))).write(
+      ProfilesCompanion(
+        displayName: displayName == null ? const Value.absent() : Value(name!),
+        avatarPath: clearAvatar
+            ? const Value(null)
+            : avatarPath == null
+            ? const Value.absent()
+            : Value(avatarPath),
+        themeMode: themeMode == null ? const Value.absent() : Value(themeMode),
+        accentKey: accentKey == null ? const Value.absent() : Value(accentKey),
+        remindDeadlines: remindDeadlines == null
+            ? const Value.absent()
+            : Value(remindDeadlines),
+        remindBackupWeekly: remindBackupWeekly == null
+            ? const Value.absent()
+            : Value(remindBackupWeekly),
+      ),
+    );
   }
 }

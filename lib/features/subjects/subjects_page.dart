@@ -53,10 +53,6 @@ class SubjectsPage extends ConsumerWidget {
                             semesterId: selectedId,
                           ),
                   ),
-                  OutlinedButton(
-                    onPressed: () => context.go('/semesters'),
-                    child: const Text('Change'),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),

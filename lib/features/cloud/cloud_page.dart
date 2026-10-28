@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:subtrack/app/theme.dart';
@@ -506,14 +505,6 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                OutlinedButton(
-                  onPressed: () async {
-                    await ref.read(authControllerProvider.notifier).signOut();
-                    if (context.mounted) context.go('/login');
-                  },
-                  child: const Text('Sign out'),
                 ),
               ],
             ),

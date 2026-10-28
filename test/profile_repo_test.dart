@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/profile_repo.dart';
 
@@ -68,5 +69,56 @@ void main() {
     final afterSave = await stream.first;
     expect(afterSave?.themeMode, 'dark');
     expect(afterSave?.accentKey, 'teal');
+  });
+
+  test('update writes each settings field and leaves the rest alone', () async {
+    await repo.ensure(userId: 'u4', username: 'kent', displayName: 'Kent');
+
+    await repo.update(
+      'u4',
+      displayName: '  Kent P.  ',
+      themeMode: 'dark',
+      accentKey: 'pink',
+      remindDeadlines: false,
+    );
+    var row = (await repo.byId('u4'))!;
+    expect(row.displayName, 'Kent P.');
+    expect(row.themeMode, 'dark');
+    expect(row.accentKey, 'pink');
+    expect(row.remindDeadlines, isFalse);
+    expect(row.remindBackupWeekly, isTrue);
+    expect(row.wifiOnlyBackup, isTrue);
+
+    await repo.update('u4', avatarPath: '/tmp/avatar.jpg');
+    row = (await repo.byId('u4'))!;
+    expect(row.avatarPath, '/tmp/avatar.jpg');
+
+    await repo.update('u4', clearAvatar: true, themeMode: 'system');
+    row = (await repo.byId('u4'))!;
+    expect(row.avatarPath, isNull);
+    expect(row.themeMode, 'system');
+    expect(row.displayName, 'Kent P.');
+  });
+
+  test('update rejects unknown themes, accents, and blank names', () async {
+    await repo.ensure(userId: 'u5', username: 'paolo');
+    await expectLater(
+      repo.update('u5', themeMode: 'sepia'),
+      throwsArgumentError,
+    );
+    await expectLater(repo.update('u5', accentKey: 'red'), throwsArgumentError);
+    await expectLater(
+      repo.update('u5', displayName: '   '),
+      throwsArgumentError,
+    );
+
+    final row = (await repo.byId('u5'))!;
+    expect(row.themeMode, 'system');
+    expect(row.accentKey, 'indigo');
+  });
+
+  test('the accent picker offers exactly the theme accents', () {
+    expect(profileAccentKeys, accentOptions.map((option) => option.key));
+    expect(profileAccentKeys, contains('pink'));
   });
 }

@@ -15,6 +15,9 @@ abstract class CloudMetadataApi {
   /// Reads every row of [table] the account can see; RLS keeps it to its
   /// own rows.
   Future<List<Map<String, dynamic>>> fetch(String table);
+
+  /// Deletes every row of [table] owned by [userId]; RLS also enforces it.
+  Future<void> deleteRowsFor(String table, String userId);
 }
 
 abstract class CloudBlobApi {
@@ -28,6 +31,9 @@ abstract class CloudBlobApi {
 
   /// Bytes used by the account's blobs folder.
   Future<int> usedBytes();
+
+  /// Deletes every blob in the account's folder.
+  Future<void> deleteAllBlobs();
 }
 
 /// Phases reported while a cloud backup runs.
@@ -438,6 +444,22 @@ class CloudRepo {
 
   /// Bytes the account's blobs take in the cloud, for the storage bar.
   Future<int> cloudUsageBytes() => blobApi.usedBytes();
+
+  /// Deletes this account's cloud rows and blobs (Profile > Delete cloud
+  /// data, AGENTS.md 14). The username-to-email mapping in the cloud
+  /// profiles table is kept, so the account can still log in by username.
+  Future<void> deleteAllCloudData() async {
+    for (final table in [
+      'commits',
+      'files',
+      'activities',
+      'subjects',
+      'semesters',
+    ]) {
+      await metadataApi.deleteRowsFor(table, userId);
+    }
+    await blobApi.deleteAllBlobs();
+  }
 
   Future<void> _upsertAll(String table, List<Map<String, dynamic>> rows) async {
     for (var start = 0; start < rows.length; start += 250) {
