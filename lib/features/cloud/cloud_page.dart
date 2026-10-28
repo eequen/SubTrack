@@ -311,15 +311,15 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Signed in as $email',
-                  style: const TextStyle(color: AppColors.mutedText),
+                  style: TextStyle(color: context.palette.mutedText),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: context.palette.card,
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(color: AppColors.cardBorder),
+                    border: Border.all(color: context.palette.cardBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -329,10 +329,10 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Uploads the latest version of every file and all your '
                         'details to your private cloud storage.',
-                        style: TextStyle(color: AppColors.mutedText),
+                        style: TextStyle(color: context.palette.mutedText),
                       ),
                       const SizedBox(height: 12),
                       usage.when(
@@ -345,8 +345,8 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                             const SizedBox(height: 4),
                             Text(
                               '${_mb(used)} / 100 MB used · $lastBackup',
-                              style: const TextStyle(
-                                color: AppColors.mutedText,
+                              style: TextStyle(
+                                color: context.palette.mutedText,
                                 fontSize: 12,
                               ),
                             ),
@@ -354,15 +354,15 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         ),
                         loading: () => Text(
                           'Checking cloud storage... · $lastBackup',
-                          style: const TextStyle(
-                            color: AppColors.mutedText,
+                          style: TextStyle(
+                            color: context.palette.mutedText,
                             fontSize: 12,
                           ),
                         ),
                         error: (error, stack) => Text(
                           'Could not check cloud storage. · $lastBackup',
-                          style: const TextStyle(
-                            color: AppColors.mutedText,
+                          style: TextStyle(
+                            color: context.palette.mutedText,
                             fontSize: 12,
                           ),
                         ),
@@ -396,8 +396,8 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         if (_progressText != null)
                           Text(
                             _progressText!,
-                            style: const TextStyle(
-                              color: AppColors.mutedText,
+                            style: TextStyle(
+                              color: context.palette.mutedText,
                               fontSize: 12,
                             ),
                           ),
@@ -460,9 +460,9 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: context.palette.card,
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(color: AppColors.cardBorder),
+                    border: Border.all(color: context.palette.cardBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -472,10 +472,10 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Copies every subject, activity, file, and version '
                         'into one .zip you can keep anywhere.',
-                        style: TextStyle(color: AppColors.mutedText),
+                        style: TextStyle(color: context.palette.mutedText),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
@@ -496,11 +496,11 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Backup is manual. Nothing leaves the phone unless '
                         'you share the .zip.',
                         style: TextStyle(
-                          color: AppColors.mutedText,
+                          color: context.palette.mutedText,
                           fontSize: 12,
                         ),
                       ),

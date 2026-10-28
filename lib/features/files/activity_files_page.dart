@@ -166,7 +166,7 @@ class _ActivityHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             notes,
-            style: const TextStyle(color: AppColors.mutedText, fontSize: 13),
+            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -206,7 +206,7 @@ class _FileCard extends StatelessWidget {
                 if (commit != null)
                   Text(
                     'v${commit.versionNo}',
-                    style: const TextStyle(color: AppColors.mutedText),
+                    style: TextStyle(color: context.palette.mutedText),
                   ),
               ],
             ),
@@ -214,8 +214,8 @@ class _FileCard extends StatelessWidget {
             if (commit != null) ...[
               Text(
                 '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
-                style: const TextStyle(
-                  color: AppColors.mutedText,
+                style: TextStyle(
+                  color: context.palette.mutedText,
                   fontSize: 13,
                 ),
                 maxLines: 1,
@@ -223,8 +223,8 @@ class _FileCard extends StatelessWidget {
               ),
               Text(
                 formatBytes(commit.sizeBytes),
-                style: const TextStyle(
-                  color: AppColors.mutedText,
+                style: TextStyle(
+                  color: context.palette.mutedText,
                   fontSize: 13,
                 ),
               ),

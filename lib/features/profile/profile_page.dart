@@ -41,15 +41,15 @@ class ProfilePage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.card,
+                color: context.palette.card,
                 borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                border: Border.all(color: AppColors.cardBorder),
+                border: Border.all(color: context.palette.cardBorder),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 26,
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: context.palette.accent,
                     foregroundImage:
                         profile == null ||
                             profile.avatarPath == null ||
@@ -80,8 +80,8 @@ class ProfilePage extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           '@$username',
-                          style: const TextStyle(
-                            color: AppColors.mutedText,
+                          style: TextStyle(
+                            color: context.palette.mutedText,
                             fontSize: 13,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -96,18 +96,18 @@ class ProfilePage extends ConsumerWidget {
             const _SectionTitle('Cloud backup and restore'),
             const SizedBox(height: 8),
             Card(
-              color: AppColors.card,
+              color: context.palette.card,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                side: const BorderSide(color: AppColors.cardBorder),
+                side: BorderSide(color: context.palette.cardBorder),
               ),
               child: ListTile(
                 leading: const Icon(Icons.cloud_outlined),
                 title: const Text('Cloud backup and restore'),
                 subtitle: const Text('Manual backup, storage, restore'),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right,
-                  color: AppColors.mutedText,
+                  color: context.palette.mutedText,
                 ),
                 onTap: () => context.push('/cloud'),
               ),
@@ -116,7 +116,7 @@ class ProfilePage extends ConsumerWidget {
             Text(
               'SubTrack version 1.0.0',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.mutedText, fontSize: 12),
+              style: TextStyle(color: context.palette.mutedText, fontSize: 12),
             ),
           ],
         ),
@@ -136,8 +136,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
-          color: AppColors.mutedText,
+        style: TextStyle(
+          color: context.palette.mutedText,
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.6,

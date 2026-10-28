@@ -102,7 +102,7 @@ class _NewSubjectDialogState extends State<_NewSubjectDialog> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: i == _colorIndex
-                                ? AppColors.text
+                                ? context.palette.text
                                 : Colors.transparent,
                             width: 3,
                           ),

@@ -111,8 +111,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         ),
                         Text(
                           count == 1 ? '1 deadline' : '$count deadlines',
-                          style: const TextStyle(
-                            color: AppColors.mutedText,
+                          style: TextStyle(
+                            color: context.palette.mutedText,
                             fontSize: 13,
                           ),
                         ),
@@ -168,12 +168,13 @@ class _MonthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.palette.card,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: context.palette.cardBorder),
       ),
       child: Column(
         children: [
@@ -208,22 +209,19 @@ class _MonthCard extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.mutedText,
-                    ),
+                    style: TextStyle(fontSize: 11, color: palette.mutedText),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 4),
-          ..._weeks(),
+          ..._weeks(palette),
         ],
       ),
     );
   }
 
-  List<Widget> _weeks() {
+  List<Widget> _weeks(AppPalette palette) {
     final first = DateTime(month.year, month.month);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     // Sunday-first grid: a Sunday (weekday 7) starts the row, else the
@@ -244,7 +242,7 @@ class _MonthCard extends StatelessWidget {
         Row(
           children: [
             for (var column = 0; column < 7; column++)
-              Expanded(child: _dayCell(cells[start + column])),
+              Expanded(child: _dayCell(cells[start + column], palette)),
           ],
         ),
       );
@@ -252,7 +250,7 @@ class _MonthCard extends StatelessWidget {
     return rows;
   }
 
-  Widget _dayCell(DateTime? day) {
+  Widget _dayCell(DateTime? day, AppPalette palette) {
     if (day == null) {
       return const SizedBox(height: 44);
     }
@@ -272,9 +270,9 @@ class _MonthCard extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? AppColors.accent : null,
+              color: isSelected ? palette.accent : null,
               border: !isSelected && isToday
-                  ? Border.all(color: AppColors.accent, width: 1.4)
+                  ? Border.all(color: palette.accent, width: 1.4)
                   : null,
             ),
             child: Column(
@@ -284,7 +282,7 @@ class _MonthCard extends StatelessWidget {
                   '${day.day}',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isSelected ? Colors.white : AppColors.text,
+                    color: isSelected ? Colors.white : palette.text,
                     fontWeight: isToday || isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
@@ -299,7 +297,7 @@ class _MonthCard extends StatelessWidget {
                           height: 4,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isSelected ? Colors.white : AppColors.accent,
+                            color: isSelected ? Colors.white : palette.accent,
                           ),
                         )
                       : null,
@@ -327,10 +325,10 @@ class _DayList extends StatelessWidget {
   Widget build(BuildContext context) {
     final day = this.day;
     if (day == null) {
-      return const Center(
+      return Center(
         child: Text(
           'Tap a day to see its deadlines.',
-          style: TextStyle(color: AppColors.mutedText),
+          style: TextStyle(color: context.palette.mutedText),
         ),
       );
     }
@@ -343,9 +341,9 @@ class _DayList extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (items.isEmpty)
-          const Text(
+          Text(
             'No deadlines on this day.',
-            style: TextStyle(color: AppColors.mutedText),
+            style: TextStyle(color: context.palette.mutedText),
           )
         else
           Expanded(
@@ -370,7 +368,7 @@ class _DayActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final activity = item.activity;
     return Material(
-      color: AppColors.card,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
@@ -385,17 +383,17 @@ class _DayActivityCard extends StatelessWidget {
                   children: [
                     Text(
                       activity.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.text,
+                        color: context.palette.text,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.subjectName,
-                      style: const TextStyle(
-                        color: AppColors.mutedText,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
                         fontSize: 12,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -405,7 +403,7 @@ class _DayActivityCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.mutedText),
+              Icon(Icons.chevron_right, color: context.palette.mutedText),
             ],
           ),
         ),

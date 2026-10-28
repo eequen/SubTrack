@@ -106,14 +106,16 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
             Text(
               'Create account',
               style: textTheme.headlineLarge?.copyWith(
-                color: AppColors.accent,
+                color: context.palette.accent,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'It takes a minute. Pick the username you will log in with.',
-              style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+              style: textTheme.bodyLarge?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
             const SizedBox(height: 24),
             Text('Display name', style: textTheme.labelLarge),
@@ -138,7 +140,9 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
             const SizedBox(height: 4),
             Text(
               '3-20 letters, numbers, or underscores. Starts with a letter.',
-              style: textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
+              style: textTheme.bodySmall?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
             const SizedBox(height: 16),
             Text('Email', style: textTheme.labelLarge),
@@ -189,7 +193,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(_error!, style: const TextStyle(color: AppColors.overdue)),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
             ],
             const SizedBox(height: 16),
             ElevatedButton(
