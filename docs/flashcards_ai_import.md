@@ -120,8 +120,13 @@ Additional rules:
 
 - **Character limits are Unicode code points** (so emoji and accented letters
   count once), measured after trimming.
-- **Plain text only.** Any HTML tag (`<a …>`, `<br>`, `<img …>`, `<style …>`)
-  is rejected; angle brackets used as math ("a < b") are fine.
+- **Plain text only.** Obvious HTML tags are rejected, using a short list:
+  `a`, `b`, `br`, `div`, `span`, `img`, `script`, `style`, `p`, `i`, `u`,
+  `table`, `tr`, `td`, `iframe`, `svg` (opening, closing, or self-closing).
+  Generic type notation such as `List<E>`, `Map<String, int>`, and
+  `Future<void>` is **allowed**, as is math like `a < b`. The first version
+  of this rule rejected any `<word>` sequence, which wrongly flagged Dart
+  generics in testing (see 12.1).
 - **No markdown** is required or rendered. `*`, `#`, and `-` are allowed as
   literal characters; the app shows them verbatim.
 - **Duplicates** are detected on a normalized front (lowercase, trimmed,
@@ -129,6 +134,10 @@ Additional rules:
   one import are dropped with a warning, not an error.
 - Unknown top-level fields are ignored (forward compatibility), but a
   different `schema` value is rejected.
+- **The prompt's 20–40 range is a quality guideline, not a contract limit.**
+  Anything from 1 to 300 cards is accepted; the preview shows the count.
+  Models overshoot on long documents (a 348-page deck produced 45 cards in
+  testing), so the importer must not reject 41.
 
 ---
 
@@ -353,6 +362,9 @@ Notes:
 | J16 | Tagalog/Taglish and emoji | Preserved; limits count code points. |
 | J17 | `\r\n` line endings | Normalized to `\n`. |
 | J18 | Unknown extra top-level field | Ignored, import succeeds. |
+| J19 | `List<E>`, `Map<String, int>`, `Future<void>` in a back | Accepted (generics, not HTML). |
+| J20 | `<b>bold</b>` in a front | `html_not_allowed` (real tag). |
+| J21 | 45 cards (model overshot the 20–40 prompt range) | Accepted; preview shows "45 cards". |
 
 ### UI (widget tests)
 
@@ -378,6 +390,31 @@ Record: JSON parses (yes/no), card count, duplicates, and factual errors found
 in a 10-card sample. Pass bar: **9/9 parses** for documents 1–2, and document 3
 must return the `error` object (not invented cards). If the bar is missed,
 tighten the prompt before building the importer.
+
+---
+
+### 12.1 Prompt tests run so far (manual)
+
+| # | Document | Output | Format | Cards | What we learned |
+|---|---|---|---|---|---|
+| 1 | Chapter 2: Global Economy (text PDF) | valid JSON | pass | 38 | EFSM card conflates temporary EFSM with permanent ESM — content risk, preview matters. |
+| 2 | Flutter code handout | valid JSON | pass | 39 | `fixedColor` is deprecated in current Flutter; the "body sits in the left corner" card is questionable. |
+| 3 | 348-page PPTX exported to PDF | valid JSON | pass | 45 | Overshot the 20–40 prompt range; emitted `List<E>` / `Future<T>`, which caught the old HTML rule's false positive. |
+
+Still to run: a scanned/image PDF. It must return the `error` object, not
+invented cards. If document 3 counts as the long handout, it also shows the
+real tradeoff: 348 pages → 45 cards is about one card per 8 pages, so a
+chapter-level import is the better study workflow (and the app should say so).
+
+**Prompt v1.1 candidates (do not change v1 until the manual bar is complete;
+any wording change needs a fresh 3×3 test round):**
+
+1. "Never return more than 40 cards, even for a long document. Cover its most
+   important concepts instead."
+2. "In comparison cards, explain both terms." (The `continue` card only said
+   it was a loop control statement.)
+3. "Answers must be understandable without the source document."
+4. "Count the cards before replying." (Models count poorly; may not help.)
 
 ---
 
