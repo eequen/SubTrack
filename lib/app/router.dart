@@ -7,6 +7,7 @@ import 'package:subtrack/features/auth/login_page.dart';
 import 'package:subtrack/features/cloud/cloud_page.dart';
 import 'package:subtrack/features/dashboard/calendar_page.dart';
 import 'package:subtrack/features/dashboard/home_page.dart';
+import 'package:subtrack/features/edit/edit_page.dart';
 import 'package:subtrack/features/files/activity_files_page.dart';
 import 'package:subtrack/features/history/commit_page.dart';
 import 'package:subtrack/features/history/version_history_page.dart';
@@ -57,8 +58,17 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
       ),
       GoRoute(
         path: '/files/:fileId/commit',
-        builder: (context, state) =>
-            CommitPage(fileId: state.pathParameters['fileId'] ?? ''),
+        builder: (context, state) => CommitPage(
+          fileId: state.pathParameters['fileId'] ?? '',
+          args: state.extra is CommitArgs ? state.extra as CommitArgs : null,
+        ),
+      ),
+      GoRoute(
+        path: '/files/:fileId/edit',
+        builder: (context, state) => EditPage(
+          fileId: state.pathParameters['fileId'] ?? '',
+          baseCommitId: int.tryParse(state.uri.queryParameters['commit'] ?? ''),
+        ),
       ),
       // No bottom bar on Edit profile (AGENTS.md section 14).
       GoRoute(

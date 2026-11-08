@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Working copies live in the app documents folder (app_flutter/edits/...).
+     Only these files are shared with external editors, through ACTION_EDIT. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="app_files" path="." />
+    <cache-path name="cache" path="." />
+</paths>

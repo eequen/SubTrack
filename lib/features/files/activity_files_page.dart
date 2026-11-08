@@ -8,6 +8,7 @@ import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
@@ -75,6 +76,9 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
   Widget build(BuildContext context) {
     final activity = ref.watch(activityProvider(_activityId));
     final files = ref.watch(filesProvider(_activityId));
+    final editing =
+        ref.watch(activeEditSessionsProvider(_activityId)).value ??
+        const <int>{};
 
     return Scaffold(
       body: SafeArea(
@@ -116,6 +120,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) => _FileCard(
                         item: items[index],
+                        hasActiveEdit: editing.contains(items[index].file.id),
                         onOpen: () => _open(items[index]),
                       ),
                     );
@@ -177,9 +182,14 @@ class _ActivityHeader extends StatelessWidget {
 }
 
 class _FileCard extends StatelessWidget {
-  const _FileCard({required this.item, required this.onOpen});
+  const _FileCard({
+    required this.item,
+    required this.hasActiveEdit,
+    required this.onOpen,
+  });
 
   final FileListItem item;
+  final bool hasActiveEdit;
   final VoidCallback onOpen;
 
   static final _dateFormat = DateFormat('MMM d, h:mm a');
@@ -203,10 +213,17 @@ class _FileCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (hasActiveEdit) ...[
+                  const SizedBox(width: 6),
+                  const EditingChip(),
+                ],
                 if (commit != null)
-                  Text(
-                    'v${commit.versionNo}',
-                    style: TextStyle(color: context.palette.mutedText),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      'v${commit.versionNo}',
+                      style: TextStyle(color: context.palette.mutedText),
+                    ),
                   ),
               ],
             ),
@@ -230,16 +247,20 @@ class _FileCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 CardButton(label: 'Open', onPressed: onOpen),
-                const SizedBox(width: 8),
+                CardButton(
+                  label: 'Edit',
+                  onPressed: () => context.push('/files/${item.file.id}/edit'),
+                ),
                 CardButton(
                   label: 'History',
                   onPressed: () =>
                       context.push('/files/${item.file.id}/history'),
                 ),
-                const SizedBox(width: 8),
                 CardButton(
                   label: 'Commit',
                   onPressed: () =>
