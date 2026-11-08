@@ -1801,11 +1801,22 @@ class $CommitsTable extends Commits with TableInfo<$CommitsTable, Commit> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
-  static const VerificationMeta _restoredFromCommitIdMeta =
-      const VerificationMeta('restoredFromCommitId');
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
   @override
-  late final GeneratedColumn<int> restoredFromCommitId = GeneratedColumn<int>(
-    'restored_from_commit_id',
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('upload'),
+  );
+  static const VerificationMeta _basedOnCommitIdMeta = const VerificationMeta(
+    'basedOnCommitId',
+  );
+  @override
+  late final GeneratedColumn<int> basedOnCommitId = GeneratedColumn<int>(
+    'based_on_commit_id',
     aliasedName,
     true,
     type: DriftSqlType.int,
@@ -1832,7 +1843,8 @@ class $CommitsTable extends Commits with TableInfo<$CommitsTable, Commit> {
     blobHash,
     sizeBytes,
     mimeType,
-    restoredFromCommitId,
+    kind,
+    basedOnCommitId,
     createdAt,
   ];
   @override
@@ -1896,12 +1908,18 @@ class $CommitsTable extends Commits with TableInfo<$CommitsTable, Commit> {
         mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
       );
     }
-    if (data.containsKey('restored_from_commit_id')) {
+    if (data.containsKey('kind')) {
       context.handle(
-        _restoredFromCommitIdMeta,
-        restoredFromCommitId.isAcceptableOrUnknown(
-          data['restored_from_commit_id']!,
-          _restoredFromCommitIdMeta,
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
+    if (data.containsKey('based_on_commit_id')) {
+      context.handle(
+        _basedOnCommitIdMeta,
+        basedOnCommitId.isAcceptableOrUnknown(
+          data['based_on_commit_id']!,
+          _basedOnCommitIdMeta,
         ),
       );
     }
@@ -1948,9 +1966,13 @@ class $CommitsTable extends Commits with TableInfo<$CommitsTable, Commit> {
         DriftSqlType.string,
         data['${effectivePrefix}mime_type'],
       )!,
-      restoredFromCommitId: attachedDatabase.typeMapping.read(
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      basedOnCommitId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}restored_from_commit_id'],
+        data['${effectivePrefix}based_on_commit_id'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1973,7 +1995,12 @@ class Commit extends DataClass implements Insertable<Commit> {
   final String blobHash;
   final int sizeBytes;
   final String mimeType;
-  final int? restoredFromCommitId;
+
+  /// upload, edit, or restore (AGENTS.md Phase 5B).
+  final String kind;
+
+  /// The version this commit was edited or restored from. Null for uploads.
+  final int? basedOnCommitId;
   final DateTime createdAt;
   const Commit({
     required this.id,
@@ -1983,7 +2010,8 @@ class Commit extends DataClass implements Insertable<Commit> {
     required this.blobHash,
     required this.sizeBytes,
     required this.mimeType,
-    this.restoredFromCommitId,
+    required this.kind,
+    this.basedOnCommitId,
     required this.createdAt,
   });
   @override
@@ -1996,8 +2024,9 @@ class Commit extends DataClass implements Insertable<Commit> {
     map['blob_hash'] = Variable<String>(blobHash);
     map['size_bytes'] = Variable<int>(sizeBytes);
     map['mime_type'] = Variable<String>(mimeType);
-    if (!nullToAbsent || restoredFromCommitId != null) {
-      map['restored_from_commit_id'] = Variable<int>(restoredFromCommitId);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || basedOnCommitId != null) {
+      map['based_on_commit_id'] = Variable<int>(basedOnCommitId);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -2012,9 +2041,10 @@ class Commit extends DataClass implements Insertable<Commit> {
       blobHash: Value(blobHash),
       sizeBytes: Value(sizeBytes),
       mimeType: Value(mimeType),
-      restoredFromCommitId: restoredFromCommitId == null && nullToAbsent
+      kind: Value(kind),
+      basedOnCommitId: basedOnCommitId == null && nullToAbsent
           ? const Value.absent()
-          : Value(restoredFromCommitId),
+          : Value(basedOnCommitId),
       createdAt: Value(createdAt),
     );
   }
@@ -2032,9 +2062,8 @@ class Commit extends DataClass implements Insertable<Commit> {
       blobHash: serializer.fromJson<String>(json['blobHash']),
       sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
       mimeType: serializer.fromJson<String>(json['mimeType']),
-      restoredFromCommitId: serializer.fromJson<int?>(
-        json['restoredFromCommitId'],
-      ),
+      kind: serializer.fromJson<String>(json['kind']),
+      basedOnCommitId: serializer.fromJson<int?>(json['basedOnCommitId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2049,7 +2078,8 @@ class Commit extends DataClass implements Insertable<Commit> {
       'blobHash': serializer.toJson<String>(blobHash),
       'sizeBytes': serializer.toJson<int>(sizeBytes),
       'mimeType': serializer.toJson<String>(mimeType),
-      'restoredFromCommitId': serializer.toJson<int?>(restoredFromCommitId),
+      'kind': serializer.toJson<String>(kind),
+      'basedOnCommitId': serializer.toJson<int?>(basedOnCommitId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2062,7 +2092,8 @@ class Commit extends DataClass implements Insertable<Commit> {
     String? blobHash,
     int? sizeBytes,
     String? mimeType,
-    Value<int?> restoredFromCommitId = const Value.absent(),
+    String? kind,
+    Value<int?> basedOnCommitId = const Value.absent(),
     DateTime? createdAt,
   }) => Commit(
     id: id ?? this.id,
@@ -2072,9 +2103,10 @@ class Commit extends DataClass implements Insertable<Commit> {
     blobHash: blobHash ?? this.blobHash,
     sizeBytes: sizeBytes ?? this.sizeBytes,
     mimeType: mimeType ?? this.mimeType,
-    restoredFromCommitId: restoredFromCommitId.present
-        ? restoredFromCommitId.value
-        : this.restoredFromCommitId,
+    kind: kind ?? this.kind,
+    basedOnCommitId: basedOnCommitId.present
+        ? basedOnCommitId.value
+        : this.basedOnCommitId,
     createdAt: createdAt ?? this.createdAt,
   );
   Commit copyWithCompanion(CommitsCompanion data) {
@@ -2086,9 +2118,10 @@ class Commit extends DataClass implements Insertable<Commit> {
       blobHash: data.blobHash.present ? data.blobHash.value : this.blobHash,
       sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
-      restoredFromCommitId: data.restoredFromCommitId.present
-          ? data.restoredFromCommitId.value
-          : this.restoredFromCommitId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      basedOnCommitId: data.basedOnCommitId.present
+          ? data.basedOnCommitId.value
+          : this.basedOnCommitId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2103,7 +2136,8 @@ class Commit extends DataClass implements Insertable<Commit> {
           ..write('blobHash: $blobHash, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('mimeType: $mimeType, ')
-          ..write('restoredFromCommitId: $restoredFromCommitId, ')
+          ..write('kind: $kind, ')
+          ..write('basedOnCommitId: $basedOnCommitId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2118,7 +2152,8 @@ class Commit extends DataClass implements Insertable<Commit> {
     blobHash,
     sizeBytes,
     mimeType,
-    restoredFromCommitId,
+    kind,
+    basedOnCommitId,
     createdAt,
   );
   @override
@@ -2132,7 +2167,8 @@ class Commit extends DataClass implements Insertable<Commit> {
           other.blobHash == this.blobHash &&
           other.sizeBytes == this.sizeBytes &&
           other.mimeType == this.mimeType &&
-          other.restoredFromCommitId == this.restoredFromCommitId &&
+          other.kind == this.kind &&
+          other.basedOnCommitId == this.basedOnCommitId &&
           other.createdAt == this.createdAt);
 }
 
@@ -2144,7 +2180,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
   final Value<String> blobHash;
   final Value<int> sizeBytes;
   final Value<String> mimeType;
-  final Value<int?> restoredFromCommitId;
+  final Value<String> kind;
+  final Value<int?> basedOnCommitId;
   final Value<DateTime> createdAt;
   const CommitsCompanion({
     this.id = const Value.absent(),
@@ -2154,7 +2191,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
     this.blobHash = const Value.absent(),
     this.sizeBytes = const Value.absent(),
     this.mimeType = const Value.absent(),
-    this.restoredFromCommitId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.basedOnCommitId = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CommitsCompanion.insert({
@@ -2165,7 +2203,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
     required String blobHash,
     required int sizeBytes,
     this.mimeType = const Value.absent(),
-    this.restoredFromCommitId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.basedOnCommitId = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : fileId = Value(fileId),
        versionNo = Value(versionNo),
@@ -2180,7 +2219,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
     Expression<String>? blobHash,
     Expression<int>? sizeBytes,
     Expression<String>? mimeType,
-    Expression<int>? restoredFromCommitId,
+    Expression<String>? kind,
+    Expression<int>? basedOnCommitId,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -2191,8 +2231,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
       if (blobHash != null) 'blob_hash': blobHash,
       if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (mimeType != null) 'mime_type': mimeType,
-      if (restoredFromCommitId != null)
-        'restored_from_commit_id': restoredFromCommitId,
+      if (kind != null) 'kind': kind,
+      if (basedOnCommitId != null) 'based_on_commit_id': basedOnCommitId,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -2205,7 +2245,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
     Value<String>? blobHash,
     Value<int>? sizeBytes,
     Value<String>? mimeType,
-    Value<int?>? restoredFromCommitId,
+    Value<String>? kind,
+    Value<int?>? basedOnCommitId,
     Value<DateTime>? createdAt,
   }) {
     return CommitsCompanion(
@@ -2216,7 +2257,8 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
       blobHash: blobHash ?? this.blobHash,
       sizeBytes: sizeBytes ?? this.sizeBytes,
       mimeType: mimeType ?? this.mimeType,
-      restoredFromCommitId: restoredFromCommitId ?? this.restoredFromCommitId,
+      kind: kind ?? this.kind,
+      basedOnCommitId: basedOnCommitId ?? this.basedOnCommitId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -2245,10 +2287,11 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
     if (mimeType.present) {
       map['mime_type'] = Variable<String>(mimeType.value);
     }
-    if (restoredFromCommitId.present) {
-      map['restored_from_commit_id'] = Variable<int>(
-        restoredFromCommitId.value,
-      );
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (basedOnCommitId.present) {
+      map['based_on_commit_id'] = Variable<int>(basedOnCommitId.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -2266,8 +2309,374 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
           ..write('blobHash: $blobHash, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('mimeType: $mimeType, ')
-          ..write('restoredFromCommitId: $restoredFromCommitId, ')
+          ..write('kind: $kind, ')
+          ..write('basedOnCommitId: $basedOnCommitId, ')
           ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EditSessionsTable extends EditSessions
+    with TableInfo<$EditSessionsTable, EditSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EditSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _fileIdMeta = const VerificationMeta('fileId');
+  @override
+  late final GeneratedColumn<int> fileId = GeneratedColumn<int>(
+    'file_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES files (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _baseCommitIdMeta = const VerificationMeta(
+    'baseCommitId',
+  );
+  @override
+  late final GeneratedColumn<int> baseCommitId = GeneratedColumn<int>(
+    'base_commit_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES commits (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _workingPathMeta = const VerificationMeta(
+    'workingPath',
+  );
+  @override
+  late final GeneratedColumn<String> workingPath = GeneratedColumn<String>(
+    'working_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fileId,
+    baseCommitId,
+    workingPath,
+    startedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'edit_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EditSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('file_id')) {
+      context.handle(
+        _fileIdMeta,
+        fileId.isAcceptableOrUnknown(data['file_id']!, _fileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileIdMeta);
+    }
+    if (data.containsKey('base_commit_id')) {
+      context.handle(
+        _baseCommitIdMeta,
+        baseCommitId.isAcceptableOrUnknown(
+          data['base_commit_id']!,
+          _baseCommitIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_baseCommitIdMeta);
+    }
+    if (data.containsKey('working_path')) {
+      context.handle(
+        _workingPathMeta,
+        workingPath.isAcceptableOrUnknown(
+          data['working_path']!,
+          _workingPathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_workingPathMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  EditSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EditSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      fileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}file_id'],
+      )!,
+      baseCommitId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}base_commit_id'],
+      )!,
+      workingPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}working_path'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EditSessionsTable createAlias(String alias) {
+    return $EditSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class EditSession extends DataClass implements Insertable<EditSession> {
+  final int id;
+  final int fileId;
+  final int baseCommitId;
+  final String workingPath;
+  final DateTime startedAt;
+  const EditSession({
+    required this.id,
+    required this.fileId,
+    required this.baseCommitId,
+    required this.workingPath,
+    required this.startedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['file_id'] = Variable<int>(fileId);
+    map['base_commit_id'] = Variable<int>(baseCommitId);
+    map['working_path'] = Variable<String>(workingPath);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    return map;
+  }
+
+  EditSessionsCompanion toCompanion(bool nullToAbsent) {
+    return EditSessionsCompanion(
+      id: Value(id),
+      fileId: Value(fileId),
+      baseCommitId: Value(baseCommitId),
+      workingPath: Value(workingPath),
+      startedAt: Value(startedAt),
+    );
+  }
+
+  factory EditSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EditSession(
+      id: serializer.fromJson<int>(json['id']),
+      fileId: serializer.fromJson<int>(json['fileId']),
+      baseCommitId: serializer.fromJson<int>(json['baseCommitId']),
+      workingPath: serializer.fromJson<String>(json['workingPath']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'fileId': serializer.toJson<int>(fileId),
+      'baseCommitId': serializer.toJson<int>(baseCommitId),
+      'workingPath': serializer.toJson<String>(workingPath),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+    };
+  }
+
+  EditSession copyWith({
+    int? id,
+    int? fileId,
+    int? baseCommitId,
+    String? workingPath,
+    DateTime? startedAt,
+  }) => EditSession(
+    id: id ?? this.id,
+    fileId: fileId ?? this.fileId,
+    baseCommitId: baseCommitId ?? this.baseCommitId,
+    workingPath: workingPath ?? this.workingPath,
+    startedAt: startedAt ?? this.startedAt,
+  );
+  EditSession copyWithCompanion(EditSessionsCompanion data) {
+    return EditSession(
+      id: data.id.present ? data.id.value : this.id,
+      fileId: data.fileId.present ? data.fileId.value : this.fileId,
+      baseCommitId: data.baseCommitId.present
+          ? data.baseCommitId.value
+          : this.baseCommitId,
+      workingPath: data.workingPath.present
+          ? data.workingPath.value
+          : this.workingPath,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EditSession(')
+          ..write('id: $id, ')
+          ..write('fileId: $fileId, ')
+          ..write('baseCommitId: $baseCommitId, ')
+          ..write('workingPath: $workingPath, ')
+          ..write('startedAt: $startedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, fileId, baseCommitId, workingPath, startedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EditSession &&
+          other.id == this.id &&
+          other.fileId == this.fileId &&
+          other.baseCommitId == this.baseCommitId &&
+          other.workingPath == this.workingPath &&
+          other.startedAt == this.startedAt);
+}
+
+class EditSessionsCompanion extends UpdateCompanion<EditSession> {
+  final Value<int> id;
+  final Value<int> fileId;
+  final Value<int> baseCommitId;
+  final Value<String> workingPath;
+  final Value<DateTime> startedAt;
+  const EditSessionsCompanion({
+    this.id = const Value.absent(),
+    this.fileId = const Value.absent(),
+    this.baseCommitId = const Value.absent(),
+    this.workingPath = const Value.absent(),
+    this.startedAt = const Value.absent(),
+  });
+  EditSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int fileId,
+    required int baseCommitId,
+    required String workingPath,
+    this.startedAt = const Value.absent(),
+  }) : fileId = Value(fileId),
+       baseCommitId = Value(baseCommitId),
+       workingPath = Value(workingPath);
+  static Insertable<EditSession> custom({
+    Expression<int>? id,
+    Expression<int>? fileId,
+    Expression<int>? baseCommitId,
+    Expression<String>? workingPath,
+    Expression<DateTime>? startedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fileId != null) 'file_id': fileId,
+      if (baseCommitId != null) 'base_commit_id': baseCommitId,
+      if (workingPath != null) 'working_path': workingPath,
+      if (startedAt != null) 'started_at': startedAt,
+    });
+  }
+
+  EditSessionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? fileId,
+    Value<int>? baseCommitId,
+    Value<String>? workingPath,
+    Value<DateTime>? startedAt,
+  }) {
+    return EditSessionsCompanion(
+      id: id ?? this.id,
+      fileId: fileId ?? this.fileId,
+      baseCommitId: baseCommitId ?? this.baseCommitId,
+      workingPath: workingPath ?? this.workingPath,
+      startedAt: startedAt ?? this.startedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (fileId.present) {
+      map['file_id'] = Variable<int>(fileId.value);
+    }
+    if (baseCommitId.present) {
+      map['base_commit_id'] = Variable<int>(baseCommitId.value);
+    }
+    if (workingPath.present) {
+      map['working_path'] = Variable<String>(workingPath.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EditSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('fileId: $fileId, ')
+          ..write('baseCommitId: $baseCommitId, ')
+          ..write('workingPath: $workingPath, ')
+          ..write('startedAt: $startedAt')
           ..write(')'))
         .toString();
   }
@@ -2929,6 +3338,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ActivitiesTable activities = $ActivitiesTable(this);
   late final $FilesTable files = $FilesTable(this);
   late final $CommitsTable commits = $CommitsTable(this);
+  late final $EditSessionsTable editSessions = $EditSessionsTable(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2940,6 +3350,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     activities,
     files,
     commits,
+    editSessions,
     profiles,
   ];
   @override
@@ -2971,6 +3382,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('commits', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'files',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('edit_sessions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'commits',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('edit_sessions', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4233,6 +4658,24 @@ final class $$FilesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$EditSessionsTable, List<EditSession>>
+  _editSessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.editSessions,
+    aliasName: 'files__id__edit_sessions__file_id',
+  );
+
+  $$EditSessionsTableProcessedTableManager get editSessionsRefs {
+    final manager = $$EditSessionsTableTableManager(
+      $_db,
+      $_db.editSessions,
+    ).filter((f) => f.fileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_editSessionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$FilesTableFilterComposer extends Composer<_$AppDatabase, $FilesTable> {
@@ -4302,6 +4745,31 @@ class $$FilesTableFilterComposer extends Composer<_$AppDatabase, $FilesTable> {
           }) => $$CommitsTableFilterComposer(
             $db: $db,
             $table: $db.commits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> editSessionsRefs(
+    Expression<bool> Function($$EditSessionsTableFilterComposer f) f,
+  ) {
+    final $$EditSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.editSessions,
+      getReferencedColumn: (t) => t.fileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EditSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.editSessions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4437,6 +4905,31 @@ class $$FilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> editSessionsRefs<T extends Object>(
+    Expression<T> Function($$EditSessionsTableAnnotationComposer a) f,
+  ) {
+    final $$EditSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.editSessions,
+      getReferencedColumn: (t) => t.fileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EditSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.editSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$FilesTableTableManager
@@ -4452,7 +4945,11 @@ class $$FilesTableTableManager
           $$FilesTableUpdateCompanionBuilder,
           (DbFile, $$FilesTableReferences),
           DbFile,
-          PrefetchHooks Function({bool activityId, bool commitsRefs})
+          PrefetchHooks Function({
+            bool activityId,
+            bool commitsRefs,
+            bool editSessionsRefs,
+          })
         > {
   $$FilesTableTableManager(_$AppDatabase db, $FilesTable table)
     : super(
@@ -4501,58 +4998,88 @@ class $$FilesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({activityId = false, commitsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (commitsRefs) db.commits],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (activityId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.activityId,
-                        referencedTable: $$FilesTableReferences
-                            ._activityIdTable(db),
-                        referencedColumn: $$FilesTableReferences
-                            ._activityIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                activityId = false,
+                commitsRefs = false,
+                editSessionsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (commitsRefs) db.commits,
+                    if (editSessionsRefs) db.editSessions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (activityId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.activityId,
+                            referencedTable: $$FilesTableReferences
+                                ._activityIdTable(db),
+                            referencedColumn: $$FilesTableReferences
+                                ._activityIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (commitsRefs)
+                        await $_getPrefetchedData<DbFile, $FilesTable, Commit>(
+                          currentTable: table,
+                          referencedTable: $$FilesTableReferences
+                              ._commitsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FilesTableReferences(db, table, p0).commitsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.fileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (editSessionsRefs)
+                        await $_getPrefetchedData<
+                          DbFile,
+                          $FilesTable,
+                          EditSession
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FilesTableReferences
+                              ._editSessionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).editSessionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.fileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (commitsRefs)
-                    await $_getPrefetchedData<DbFile, $FilesTable, Commit>(
-                      currentTable: table,
-                      referencedTable: $$FilesTableReferences._commitsRefsTable(
-                        db,
-                      ),
-                      managerFromTypedResult: (p0) =>
-                          $$FilesTableReferences(db, table, p0).commitsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.fileId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4569,7 +5096,11 @@ typedef $$FilesTableProcessedTableManager =
       $$FilesTableUpdateCompanionBuilder,
       (DbFile, $$FilesTableReferences),
       DbFile,
-      PrefetchHooks Function({bool activityId, bool commitsRefs})
+      PrefetchHooks Function({
+        bool activityId,
+        bool commitsRefs,
+        bool editSessionsRefs,
+      })
     >;
 typedef $$CommitsTableCreateCompanionBuilder = CommitsCompanion Function({
   Value<int> id,
@@ -4579,7 +5110,8 @@ typedef $$CommitsTableCreateCompanionBuilder = CommitsCompanion Function({
   required String blobHash,
   required int sizeBytes,
   Value<String> mimeType,
-  Value<int?> restoredFromCommitId,
+  Value<String> kind,
+  Value<int?> basedOnCommitId,
   Value<DateTime> createdAt,
 });
 typedef $$CommitsTableUpdateCompanionBuilder = CommitsCompanion Function({
@@ -4590,7 +5122,8 @@ typedef $$CommitsTableUpdateCompanionBuilder = CommitsCompanion Function({
   Value<String> blobHash,
   Value<int> sizeBytes,
   Value<String> mimeType,
-  Value<int?> restoredFromCommitId,
+  Value<String> kind,
+  Value<int?> basedOnCommitId,
   Value<DateTime> createdAt,
 });
 
@@ -4612,6 +5145,24 @@ final class $$CommitsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$EditSessionsTable, List<EditSession>>
+  _editSessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.editSessions,
+    aliasName: 'commits__id__edit_sessions__base_commit_id',
+  );
+
+  $$EditSessionsTableProcessedTableManager get editSessionsRefs {
+    final manager = $$EditSessionsTableTableManager(
+      $_db,
+      $_db.editSessions,
+    ).filter((f) => f.baseCommitId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_editSessionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -4655,8 +5206,13 @@ class $$CommitsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get restoredFromCommitId => $composableBuilder(
-    column: $table.restoredFromCommitId,
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get basedOnCommitId => $composableBuilder(
+    column: $table.basedOnCommitId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4686,6 +5242,31 @@ class $$CommitsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> editSessionsRefs(
+    Expression<bool> Function($$EditSessionsTableFilterComposer f) f,
+  ) {
+    final $$EditSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.editSessions,
+      getReferencedColumn: (t) => t.baseCommitId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EditSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.editSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -4728,8 +5309,13 @@ class $$CommitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get restoredFromCommitId => $composableBuilder(
-    column: $table.restoredFromCommitId,
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get basedOnCommitId => $composableBuilder(
+    column: $table.basedOnCommitId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4789,8 +5375,11 @@ class $$CommitsTableAnnotationComposer
   GeneratedColumn<String> get mimeType =>
       $composableBuilder(column: $table.mimeType, builder: (column) => column);
 
-  GeneratedColumn<int> get restoredFromCommitId => $composableBuilder(
-    column: $table.restoredFromCommitId,
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get basedOnCommitId => $composableBuilder(
+    column: $table.basedOnCommitId,
     builder: (column) => column,
   );
 
@@ -4819,6 +5408,31 @@ class $$CommitsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> editSessionsRefs<T extends Object>(
+    Expression<T> Function($$EditSessionsTableAnnotationComposer a) f,
+  ) {
+    final $$EditSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.editSessions,
+      getReferencedColumn: (t) => t.baseCommitId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EditSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.editSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CommitsTableTableManager
@@ -4834,7 +5448,7 @@ class $$CommitsTableTableManager
           $$CommitsTableUpdateCompanionBuilder,
           (Commit, $$CommitsTableReferences),
           Commit,
-          PrefetchHooks Function({bool fileId})
+          PrefetchHooks Function({bool fileId, bool editSessionsRefs})
         > {
   $$CommitsTableTableManager(_$AppDatabase db, $CommitsTable table)
     : super(
@@ -4856,7 +5470,8 @@ class $$CommitsTableTableManager
                 Value<String> blobHash = const Value.absent(),
                 Value<int> sizeBytes = const Value.absent(),
                 Value<String> mimeType = const Value.absent(),
-                Value<int?> restoredFromCommitId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int?> basedOnCommitId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CommitsCompanion(
                 id: id,
@@ -4866,7 +5481,8 @@ class $$CommitsTableTableManager
                 blobHash: blobHash,
                 sizeBytes: sizeBytes,
                 mimeType: mimeType,
-                restoredFromCommitId: restoredFromCommitId,
+                kind: kind,
+                basedOnCommitId: basedOnCommitId,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -4878,7 +5494,8 @@ class $$CommitsTableTableManager
                 required String blobHash,
                 required int sizeBytes,
                 Value<String> mimeType = const Value.absent(),
-                Value<int?> restoredFromCommitId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int?> basedOnCommitId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CommitsCompanion.insert(
                 id: id,
@@ -4888,7 +5505,8 @@ class $$CommitsTableTableManager
                 blobHash: blobHash,
                 sizeBytes: sizeBytes,
                 mimeType: mimeType,
-                restoredFromCommitId: restoredFromCommitId,
+                kind: kind,
+                basedOnCommitId: basedOnCommitId,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -4899,10 +5517,10 @@ class $$CommitsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({fileId = false}) {
+          prefetchHooksCallback: ({fileId = false, editSessionsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (editSessionsRefs) db.editSessions],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -4935,7 +5553,28 @@ class $$CommitsTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (editSessionsRefs)
+                    await $_getPrefetchedData<
+                      Commit,
+                      $CommitsTable,
+                      EditSession
+                    >(
+                      currentTable: table,
+                      referencedTable: $$CommitsTableReferences
+                          ._editSessionsRefsTable(db),
+                      managerFromTypedResult: (p0) => $$CommitsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).editSessionsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.baseCommitId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -4955,7 +5594,402 @@ typedef $$CommitsTableProcessedTableManager =
       $$CommitsTableUpdateCompanionBuilder,
       (Commit, $$CommitsTableReferences),
       Commit,
-      PrefetchHooks Function({bool fileId})
+      PrefetchHooks Function({bool fileId, bool editSessionsRefs})
+    >;
+typedef $$EditSessionsTableCreateCompanionBuilder =
+    EditSessionsCompanion Function({
+      Value<int> id,
+      required int fileId,
+      required int baseCommitId,
+      required String workingPath,
+      Value<DateTime> startedAt,
+    });
+typedef $$EditSessionsTableUpdateCompanionBuilder =
+    EditSessionsCompanion Function({
+      Value<int> id,
+      Value<int> fileId,
+      Value<int> baseCommitId,
+      Value<String> workingPath,
+      Value<DateTime> startedAt,
+    });
+
+final class $$EditSessionsTableReferences
+    extends BaseReferences<_$AppDatabase, $EditSessionsTable, EditSession> {
+  $$EditSessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $FilesTable _fileIdTable(_$AppDatabase db) =>
+      db.files.createAlias('edit_sessions__file_id__files__id');
+
+  $$FilesTableProcessedTableManager get fileId {
+    final $_column = $_itemColumn<int>('file_id')!;
+
+    final manager = $$FilesTableTableManager(
+      $_db,
+      $_db.files,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CommitsTable _baseCommitIdTable(_$AppDatabase db) =>
+      db.commits.createAlias('edit_sessions__base_commit_id__commits__id');
+
+  $$CommitsTableProcessedTableManager get baseCommitId {
+    final $_column = $_itemColumn<int>('base_commit_id')!;
+
+    final manager = $$CommitsTableTableManager(
+      $_db,
+      $_db.commits,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_baseCommitIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EditSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $EditSessionsTable> {
+  $$EditSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get workingPath => $composableBuilder(
+    column: $table.workingPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$FilesTableFilterComposer get fileId {
+    final $$FilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fileId,
+      referencedTable: $db.files,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FilesTableFilterComposer(
+            $db: $db,
+            $table: $db.files,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CommitsTableFilterComposer get baseCommitId {
+    final $$CommitsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.baseCommitId,
+      referencedTable: $db.commits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CommitsTableFilterComposer(
+            $db: $db,
+            $table: $db.commits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EditSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EditSessionsTable> {
+  $$EditSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get workingPath => $composableBuilder(
+    column: $table.workingPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$FilesTableOrderingComposer get fileId {
+    final $$FilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fileId,
+      referencedTable: $db.files,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.files,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CommitsTableOrderingComposer get baseCommitId {
+    final $$CommitsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.baseCommitId,
+      referencedTable: $db.commits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CommitsTableOrderingComposer(
+            $db: $db,
+            $table: $db.commits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EditSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EditSessionsTable> {
+  $$EditSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workingPath => $composableBuilder(
+    column: $table.workingPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  $$FilesTableAnnotationComposer get fileId {
+    final $$FilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fileId,
+      referencedTable: $db.files,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.files,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CommitsTableAnnotationComposer get baseCommitId {
+    final $$CommitsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.baseCommitId,
+      referencedTable: $db.commits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CommitsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.commits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EditSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EditSessionsTable,
+          EditSession,
+          $$EditSessionsTableFilterComposer,
+          $$EditSessionsTableOrderingComposer,
+          $$EditSessionsTableAnnotationComposer,
+          $$EditSessionsTableCreateCompanionBuilder,
+          $$EditSessionsTableUpdateCompanionBuilder,
+          (EditSession, $$EditSessionsTableReferences),
+          EditSession,
+          PrefetchHooks Function({bool fileId, bool baseCommitId})
+        > {
+  $$EditSessionsTableTableManager(_$AppDatabase db, $EditSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EditSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EditSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EditSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> fileId = const Value.absent(),
+                Value<int> baseCommitId = const Value.absent(),
+                Value<String> workingPath = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+              }) => EditSessionsCompanion(
+                id: id,
+                fileId: fileId,
+                baseCommitId: baseCommitId,
+                workingPath: workingPath,
+                startedAt: startedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int fileId,
+                required int baseCommitId,
+                required String workingPath,
+                Value<DateTime> startedAt = const Value.absent(),
+              }) => EditSessionsCompanion.insert(
+                id: id,
+                fileId: fileId,
+                baseCommitId: baseCommitId,
+                workingPath: workingPath,
+                startedAt: startedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$EditSessionsTable, EditSession>(table),
+                  $$EditSessionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({fileId = false, baseCommitId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (fileId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.fileId,
+                        referencedTable: $$EditSessionsTableReferences
+                            ._fileIdTable(db),
+                        referencedColumn: $$EditSessionsTableReferences
+                            ._fileIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (baseCommitId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.baseCommitId,
+                        referencedTable: $$EditSessionsTableReferences
+                            ._baseCommitIdTable(db),
+                        referencedColumn: $$EditSessionsTableReferences
+                            ._baseCommitIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EditSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EditSessionsTable,
+      EditSession,
+      $$EditSessionsTableFilterComposer,
+      $$EditSessionsTableOrderingComposer,
+      $$EditSessionsTableAnnotationComposer,
+      $$EditSessionsTableCreateCompanionBuilder,
+      $$EditSessionsTableUpdateCompanionBuilder,
+      (EditSession, $$EditSessionsTableReferences),
+      EditSession,
+      PrefetchHooks Function({bool fileId, bool baseCommitId})
     >;
 typedef $$ProfilesTableCreateCompanionBuilder = ProfilesCompanion Function({
   required String userId,
@@ -5279,6 +6313,8 @@ class $AppDatabaseManager {
       $$FilesTableTableManager(_db, _db.files);
   $$CommitsTableTableManager get commits =>
       $$CommitsTableTableManager(_db, _db.commits);
+  $$EditSessionsTableTableManager get editSessions =>
+      $$EditSessionsTableTableManager(_db, _db.editSessions);
   $$ProfilesTableTableManager get profiles =>
       $$ProfilesTableTableManager(_db, _db.profiles);
 }

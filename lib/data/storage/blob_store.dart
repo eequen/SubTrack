@@ -63,6 +63,48 @@ class BlobStore {
     return file.readAsBytes();
   }
 
+  /// Copies the blob into `<root>/edits/<sessionId>/<displayName>` and
+  /// returns the working copy. Editors get this file through the Android
+  /// FileProvider; the blob itself is never handed out for editing.
+  Future<File> createWorkingCopy({
+    required String hash,
+    required int sessionId,
+    required String displayName,
+  }) async {
+    final root = await _root;
+    final dir = Directory(p.join(root.path, 'edits', '$sessionId'));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    final target = File(p.join(dir.path, _safeName(displayName)));
+    await target.writeAsBytes(await read(hash), flush: true);
+    return target;
+  }
+
+  /// Deletes the whole `edits/<sessionId>` folder, if it exists.
+  Future<void> deleteWorkingCopy(int sessionId) async {
+    final root = await _root;
+    final dir = Directory(p.join(root.path, 'edits', '$sessionId'));
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
+  /// Removes working-copy folders whose session row is gone (for example,
+  /// after the activity was deleted). Sessions in [keepSessionIds] survive.
+  Future<void> cleanupWorkingCopies(Set<int> keepSessionIds) async {
+    final root = await _root;
+    final dir = Directory(p.join(root.path, 'edits'));
+    if (!await dir.exists()) return;
+    await for (final entry in dir.list()) {
+      if (entry is! Directory) continue;
+      final id = int.tryParse(p.basename(entry.path));
+      if (id == null || !keepSessionIds.contains(id)) {
+        await entry.delete(recursive: true);
+      }
+    }
+  }
+
   /// Copies the blob into `<root>/tmp` carrying [displayName]'s sanitized
   /// name (and extension) so an external app can open it. Blob content is
   /// immutable, so the copy is reused on later opens.
@@ -72,13 +114,19 @@ class BlobStore {
     if (!await tmp.exists()) {
       await tmp.create(recursive: true);
     }
-    final safeName = p
-        .basename(displayName)
-        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final target = File(p.join(tmp.path, '${hash.substring(0, 8)}_$safeName'));
+    final target = File(
+      p.join(tmp.path, '${hash.substring(0, 8)}_${_safeName(displayName)}'),
+    );
     if (!await target.exists()) {
       await target.writeAsBytes(await read(hash), flush: true);
     }
     return target;
+  }
+
+  String _safeName(String displayName) {
+    final name = p
+        .basename(displayName)
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    return name.isEmpty ? 'document' : name;
   }
 }

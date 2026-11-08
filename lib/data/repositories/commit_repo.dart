@@ -34,6 +34,10 @@ class CommitRepo {
   }
 
   /// Creates the commit and keeps `files.current_commit_id` in sync.
+  ///
+  /// [kind] is `upload`, `edit`, or `restore`. [basedOnCommitId] is the
+  /// version the content came from (edit/restore) and stays null for an
+  /// upload. Existing commits are never updated.
   Future<int> create({
     required int fileId,
     required int versionNo,
@@ -41,7 +45,8 @@ class CommitRepo {
     required String blobHash,
     required int sizeBytes,
     String mimeType = '',
-    int? restoredFromCommitId,
+    String kind = 'upload',
+    int? basedOnCommitId,
   }) async {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
@@ -49,6 +54,9 @@ class CommitRepo {
     }
     if (versionNo < 1) {
       throw ArgumentError('Version number must be at least 1.');
+    }
+    if (!const {'upload', 'edit', 'restore'}.contains(kind)) {
+      throw ArgumentError('Unknown commit kind: $kind');
     }
     return db.transaction(() async {
       final id = await db
@@ -61,7 +69,8 @@ class CommitRepo {
               blobHash: blobHash,
               sizeBytes: sizeBytes,
               mimeType: Value(mimeType),
-              restoredFromCommitId: Value(restoredFromCommitId),
+              kind: Value(kind),
+              basedOnCommitId: Value(basedOnCommitId),
             ),
           );
       await (db.update(db.files)..where((f) => f.id.equals(fileId))).write(
@@ -89,7 +98,8 @@ class CommitRepo {
       blobHash: source.blobHash,
       sizeBytes: source.sizeBytes,
       mimeType: source.mimeType,
-      restoredFromCommitId: source.id,
+      kind: 'restore',
+      basedOnCommitId: source.id,
     );
   }
 }
