@@ -1,17 +1,25 @@
+import 'dart:io';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/backup_repo.dart';
+import 'package:subtrack/data/repositories/cloud_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/backup/backup_providers.dart';
+import 'package:subtrack/features/cloud/cloud_providers.dart';
+import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 
 /// Screen 10 from AGENTS.md section 14: Cloud backup.
 ///
-/// Phase 4 delivers the local .zip export and import; the cloud buttons,
-/// storage bar, and settings arrive in Phase 5.
+/// Phase 5 delivers the manual Back up now and Restore from cloud buttons,
+/// the storage bar, and the backup settings. Backup stays manual: nothing
+/// is uploaded until the student presses the button.
 class CloudPage extends ConsumerStatefulWidget {
   const CloudPage({super.key});
 
@@ -22,11 +30,194 @@ class CloudPage extends ConsumerStatefulWidget {
 class _CloudPageState extends ConsumerState<CloudPage> {
   bool _exporting = false;
   bool _importing = false;
+  bool _backingUp = false;
+  bool _restoring = false;
+  bool _cancelRequested = false;
+  String? _progressText;
+
+  bool get _busy => _backingUp || _restoring;
+
+  String _mb(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
+
+  /// Screen 10 settings live on the local profile row now (AGENTS.md
+  /// section 8), so each account keeps its own.
+  Future<void> _setWifiOnly(DbProfile row, bool value) async {
+    await ref
+        .read(profileRepoProvider)
+        .save(row.copyWith(wifiOnlyBackup: value));
+  }
+
+  Future<void> _setIncludeOlder(DbProfile row, bool value) async {
+    await ref
+        .read(profileRepoProvider)
+        .save(row.copyWith(includeOlderVersions: value));
+  }
 
   void _snack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Back up now (AGENTS.md section 9, Phase 5 task 5): manual upload with
+  /// progress and cancel. Honours the Wi-Fi-only setting (constraint 7's
+  /// free plan; screen 10).
+  Future<void> _backupNow() async {
+    final settings = ref.read(profileProvider).value;
+    final wifiOnly = settings?.wifiOnlyBackup ?? true;
+    final includeOlder = settings?.includeOlderVersions ?? false;
+    if (wifiOnly) {
+      final networks = await ref.read(connectivityCheckProvider)();
+      final onWifi =
+          networks.contains(ConnectivityResult.wifi) ||
+          networks.contains(ConnectivityResult.ethernet);
+      if (!onWifi) {
+        _snack('Wi-Fi only is on. Connect to Wi-Fi or untick it below.');
+        return;
+      }
+    }
+    setState(() {
+      _backingUp = true;
+      _cancelRequested = false;
+      _progressText = null;
+    });
+    try {
+      await ref
+          .read(cloudRepoProvider)
+          .backupNow(
+            onProgress: (progress) {
+              if (!mounted) return;
+              setState(() {
+                _progressText = switch (progress.phase) {
+                  CloudBackupPhase.preparing => 'Preparing...',
+                  CloudBackupPhase.metadata => 'Uploading details...',
+                  CloudBackupPhase.blobs =>
+                    progress.total == 0
+                        ? null
+                        : 'Uploading files ${progress.current} of '
+                              '${progress.total}...',
+                  CloudBackupPhase.done => null,
+                };
+              });
+            },
+            cancelled: () => _cancelRequested,
+            includeOlderVersions: includeOlder,
+          );
+      await ref
+          .read(sharedPreferencesProvider)
+          .setString(
+            'subtrack_last_cloud_backup',
+            DateTime.now().toUtc().toIso8601String(),
+          );
+      ref.invalidate(cloudUsageProvider);
+      _snack('Backed up to the cloud.');
+    } on CloudBackupCancelled {
+      _snack('Backup cancelled.');
+    } on CloudBackupException catch (e) {
+      _snack(e.message);
+    } on SocketException {
+      _snack('No internet connection. Cloud backup needs the internet.');
+    } catch (e) {
+      _snack('Could not back up: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _backingUp = false;
+          _progressText = null;
+        });
+      }
+    }
+  }
+
+  /// Restore from cloud (AGENTS.md section 9, Phase 5 task 7): show what
+  /// would come back, ask for confirmation, then replace everything on
+  /// this device.
+  Future<void> _restore() async {
+    final BackupContents contents;
+    try {
+      contents = await ref.read(cloudRepoProvider).peekCloud();
+    } on SocketException {
+      _snack('No internet connection. Restore needs the internet.');
+      return;
+    } catch (e) {
+      _snack('Could not check the cloud: $e');
+      return;
+    }
+    if (contents.semesters == 0 && contents.commits == 0) {
+      _snack('Nothing is in the cloud yet. Press Back up now first.');
+      return;
+    }
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore from cloud?'),
+        content: Text(
+          'This replaces everything in the app with the cloud backup.\n\n'
+          'Semesters: ${contents.semesters} · '
+          'Subjects: ${contents.subjects} · '
+          'Activities: ${contents.activities} · '
+          'Versions: ${contents.commits}\n\n'
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      _restoring = true;
+      _cancelRequested = false;
+      _progressText = null;
+    });
+    try {
+      await ref
+          .read(cloudRepoProvider)
+          .restoreFromCloud(
+            onProgress: (progress) {
+              if (!mounted) return;
+              setState(() {
+                _progressText = switch (progress.phase) {
+                  CloudRestorePhase.preparing => 'Checking the cloud...',
+                  CloudRestorePhase.downloading =>
+                    progress.total == 0
+                        ? null
+                        : 'Downloading files ${progress.current} of '
+                              '${progress.total}...',
+                  CloudRestorePhase.replacing => 'Putting everything back...',
+                  CloudRestorePhase.done => null,
+                };
+              });
+            },
+            cancelled: () => _cancelRequested,
+          );
+      // The cloud brings its own semesters; the student chooses again.
+      await ref.read(selectedSemesterProvider.notifier).select(null);
+      _snack('Restored from the cloud. Choose a semester to see it.');
+    } on CloudBackupCancelled {
+      _snack('Restore cancelled.');
+    } on CloudBackupException catch (e) {
+      _snack(e.message);
+    } on SocketException {
+      _snack('No internet connection. Restore needs the internet.');
+    } catch (e) {
+      _snack('Could not restore: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _restoring = false;
+          _progressText = null;
+        });
+      }
+    }
   }
 
   /// Export (AGENTS.md section 9, task 4) and hand the .zip to the share
@@ -97,82 +288,226 @@ class _CloudPageState extends ConsumerState<CloudPage> {
   @override
   Widget build(BuildContext context) {
     final email = ref.watch(authControllerProvider)?.email ?? '';
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final settings = ref.watch(profileProvider).value;
+    final usage = ref.watch(cloudUsageProvider);
+    final lastRaw = prefs.getString('subtrack_last_cloud_backup');
+    final lastBackup = lastRaw == null
+        ? 'No backup yet.'
+        : 'Last backup: ${DateFormat('MMM d, y h:mm a').format(DateTime.parse(lastRaw).toLocal())}';
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppTheme.screenPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Cloud backup',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Signed in as $email',
-                style: const TextStyle(color: AppColors.mutedText),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(color: AppColors.cardBorder),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Cloud backup',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Local backup (.zip)',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Copies every subject, activity, file, and version '
-                      'into one .zip you can keep anywhere.',
-                      style: TextStyle(color: AppColors.mutedText),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _exporting ? null : _export,
-                      child: Text(
-                        _exporting
-                            ? 'Exporting...'
-                            : 'Export local backup (.zip)',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: _importing ? null : _import,
-                      child: Text(
-                        _importing
-                            ? 'Importing...'
-                            : 'Import local backup (.zip)',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Backup is manual. Nothing leaves the phone unless '
-                      'you share the .zip.',
-                      style: TextStyle(
-                        color: AppColors.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  'Signed in as $email',
+                  style: TextStyle(color: context.palette.mutedText),
                 ),
-              ),
-              const Spacer(),
-              OutlinedButton(
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
-                },
-                child: const Text('Sign out'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.palette.card,
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(color: context.palette.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Back up to the cloud',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Uploads the latest version of every file and all your '
+                        'details to your private cloud storage.',
+                        style: TextStyle(color: context.palette.mutedText),
+                      ),
+                      const SizedBox(height: 12),
+                      usage.when(
+                        data: (used) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            LinearProgressIndicator(
+                              value: (used / cloudQuotaBytes).clamp(0.0, 1.0),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_mb(used)} / 100 MB used · $lastBackup',
+                              style: TextStyle(
+                                color: context.palette.mutedText,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        loading: () => Text(
+                          'Checking cloud storage... · $lastBackup',
+                          style: TextStyle(
+                            color: context.palette.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                        error: (error, stack) => Text(
+                          'Could not check cloud storage. · $lastBackup',
+                          style: TextStyle(
+                            color: context.palette.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _busy ? null : _backupNow,
+                        child: Text(
+                          _backingUp ? 'Backing up...' : 'Back up now',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _busy ? null : _restore,
+                        child: Text(
+                          _restoring ? 'Restoring...' : 'Restore from cloud',
+                        ),
+                      ),
+                      if (_backingUp || _restoring) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Expanded(child: LinearProgressIndicator()),
+                            TextButton(
+                              onPressed: () =>
+                                  setState(() => _cancelRequested = true),
+                              child: const Text('Cancel'),
+                            ),
+                          ],
+                        ),
+                        if (_progressText != null)
+                          Text(
+                            _progressText!,
+                            style: TextStyle(
+                              color: context.palette.mutedText,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: settings?.wifiOnlyBackup ?? true,
+                            onChanged: _busy || settings == null
+                                ? null
+                                : (value) =>
+                                      _setWifiOnly(settings, value ?? true),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _busy || settings == null
+                                  ? null
+                                  : () => _setWifiOnly(
+                                      settings,
+                                      !settings.wifiOnlyBackup,
+                                    ),
+                              child: const Text('Back up on Wi-Fi only'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: settings?.includeOlderVersions ?? false,
+                            onChanged: _busy || settings == null
+                                ? null
+                                : (value) => _setIncludeOlder(
+                                    settings,
+                                    value ?? false,
+                                  ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _busy || settings == null
+                                  ? null
+                                  : () => _setIncludeOlder(
+                                      settings,
+                                      !settings.includeOlderVersions,
+                                    ),
+                              child: const Text('Include older versions'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.palette.card,
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(color: context.palette.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Local backup (.zip)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Copies every subject, activity, file, and version '
+                        'into one .zip you can keep anywhere.',
+                        style: TextStyle(color: context.palette.mutedText),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _exporting ? null : _export,
+                        child: Text(
+                          _exporting
+                              ? 'Exporting...'
+                              : 'Export local backup (.zip)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _importing ? null : _import,
+                        child: Text(
+                          _importing
+                              ? 'Importing...'
+                              : 'Import local backup (.zip)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Backup is manual. Nothing leaves the phone unless '
+                        'you share the .zip.',
+                        style: TextStyle(
+                          color: context.palette.mutedText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

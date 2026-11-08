@@ -130,10 +130,10 @@ class _CommitPageState extends ConsumerState<CommitPage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const Text(
+                        Text(
                           'Commit new version',
                           style: TextStyle(
-                            color: AppColors.mutedText,
+                            color: context.palette.mutedText,
                             fontSize: 13,
                           ),
                         ),
@@ -149,15 +149,15 @@ class _CommitPageState extends ConsumerState<CommitPage> {
                     Text.rich(
                       TextSpan(
                         children: [
-                          const TextSpan(
+                          TextSpan(
                             text: 'Next version ',
-                            style: TextStyle(color: AppColors.mutedText),
+                            style: TextStyle(color: context.palette.mutedText),
                           ),
                           TextSpan(
                             text: 'v$nextVersionNo',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppColors.accent,
+                              color: context.palette.accent,
                             ),
                           ),
                         ],
@@ -237,9 +237,9 @@ class _PickCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'File to commit',
-              style: TextStyle(color: AppColors.mutedText, fontSize: 13),
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Row(
@@ -260,8 +260,8 @@ class _PickCard extends StatelessWidget {
                             ),
                             Text(
                               formatBytes(picked.bytes.length),
-                              style: const TextStyle(
-                                color: AppColors.mutedText,
+                              style: TextStyle(
+                                color: context.palette.mutedText,
                                 fontSize: 13,
                               ),
                             ),
@@ -299,15 +299,15 @@ class _HashBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, bg, icon, label) = identical
         ? (
-            AppColors.deadlineText,
-            AppColors.deadlineBg,
+            context.palette.deadlineText,
+            context.palette.deadlineBg,
             Icons.warning_amber_outlined,
             'This file is identical to the current version'
                 '${currentVersionNo == null ? '' : ' (v$currentVersionNo)'}.',
           )
         : (
-            AppColors.finalText,
-            AppColors.finalBg,
+            context.palette.finalText,
+            context.palette.finalBg,
             Icons.check_circle_outline,
             'New content detected — SHA-256 ${hash.substring(0, 12)}…',
           );

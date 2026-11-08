@@ -300,8 +300,8 @@ class _SubjectHeader extends StatelessWidget {
             if (countLabel != null)
               Text(
                 countLabel!,
-                style: const TextStyle(
-                  color: AppColors.mutedText,
+                style: TextStyle(
+                  color: context.palette.mutedText,
                   fontSize: 13,
                 ),
               ),
@@ -350,10 +350,10 @@ class _ActivityCard extends ConsumerWidget {
                   ],
                   if (activity.isArchived) ...[
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Archived',
                       style: TextStyle(
-                        color: AppColors.mutedText,
+                        color: context.palette.mutedText,
                         fontSize: 12,
                       ),
                     ),
@@ -363,7 +363,7 @@ class _ActivityCard extends ConsumerWidget {
               const SizedBox(height: 6),
               Text(
                 _filesLabel,
-                style: const TextStyle(color: AppColors.mutedText),
+                style: TextStyle(color: context.palette.mutedText),
               ),
             ],
           ),

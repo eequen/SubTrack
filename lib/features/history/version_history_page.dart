@@ -117,10 +117,10 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const Text(
+                        Text(
                           'Version history',
                           style: TextStyle(
-                            color: AppColors.mutedText,
+                            color: context.palette.mutedText,
                             fontSize: 13,
                           ),
                         ),
@@ -176,17 +176,24 @@ class _RestoreBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.inProgressBg,
+        color: context.palette.inProgressBg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.info_outline, size: 18, color: AppColors.inProgressText),
+          Icon(
+            Icons.info_outline,
+            size: 18,
+            color: context.palette.inProgressText,
+          ),
           SizedBox(width: 8),
           Expanded(
             child: Text(
               'Restoring creates a new version. Nothing is deleted.',
-              style: TextStyle(color: AppColors.inProgressText, fontSize: 13),
+              style: TextStyle(
+                color: context.palette.inProgressText,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -235,7 +242,7 @@ class _CommitCard extends StatelessWidget {
             Text(
               '${_dateFormat.format(commit.createdAt)}'
               ' · ${formatBytes(commit.sizeBytes)}',
-              style: const TextStyle(color: AppColors.mutedText, fontSize: 13),
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Row(

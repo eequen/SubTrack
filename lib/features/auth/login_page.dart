@@ -5,7 +5,8 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 
-/// Screen 1 from AGENTS.md section 14: Login (also Create account).
+/// Screen 1 from AGENTS.md section 14: Log in with an email or a username.
+/// Creating an account lives on its own screen (`/create-account`).
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -14,15 +15,23 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _createMode = false;
   bool _busy = false;
+  bool _passwordVisible = false;
   String? _error;
+
+  /// Any edit clears a previous error so the form looks clean while the
+  /// student fixes what was wrong.
+  void _clearError() {
+    if (_error != null) {
+      setState(() => _error = null);
+    }
+  }
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -34,18 +43,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
     final auth = ref.read(authControllerProvider.notifier);
     try {
-      if (_createMode) {
-        await auth.signUp(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-      } else {
-        await auth.signIn(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-      }
-      if (mounted) context.go('/semesters');
+      await auth.signIn(
+        identifier: _identifierController.text,
+        password: _passwordController.text,
+      );
+      if (mounted) context.go('/home');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -65,69 +67,74 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Text(
               'SubTrack',
               style: textTheme.headlineLarge?.copyWith(
-                color: AppColors.accent,
+                color: context.palette.accent,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Every subject, every version, safely kept.',
-              style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+              style: textTheme.bodyLarge?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
-            const SizedBox(height: 32),
-            Text('Email', style: textTheme.labelLarge),
+            const SizedBox(height: 16),
+            // First-time users must see where to go (requested change).
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.palette.inProgressBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'First time here? Create an account first — the button at '
+                'the end of this screen.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: context.palette.inProgressText,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('Email or username', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
+              controller: _identifierController,
               autocorrect: false,
-              decoration: const InputDecoration(hintText: 'maria@school.edu'),
+              enableSuggestions: false,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearError(),
             ),
             const SizedBox(height: 16),
             Text('Password', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(hintText: '••••••••••'),
+              obscureText: !_passwordVisible,
+              onChanged: (_) => _clearError(),
               onSubmitted: (_) => _submit(),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Password reset needs cloud login (Phase 5).',
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Forgot password?'),
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _passwordVisible = !_passwordVisible),
+                  icon: Icon(
+                    _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                ),
               ),
             ),
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 8),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
               const SizedBox(height: 8),
             ],
             ElevatedButton(
               onPressed: _busy ? null : _submit,
-              child: Text(
-                _busy
-                    ? 'Please wait…'
-                    : (_createMode ? 'Create account' : 'Log in'),
-              ),
+              child: Text(_busy ? 'Please wait…' : 'Log in'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                      _createMode = !_createMode;
-                      _error = null;
-                    }),
-              child: Text(_createMode ? 'Back to log in' : 'Create account'),
+              onPressed: _busy ? null : () => context.go('/signup'),
+              child: const Text('Create account'),
             ),
             const SizedBox(height: 16),
             const Text(

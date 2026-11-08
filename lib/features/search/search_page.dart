@@ -209,10 +209,10 @@ class _Section extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: AppColors.mutedText,
+              color: context.palette.mutedText,
             ),
           ),
         ),
@@ -251,7 +251,7 @@ class _ResultCard extends StatelessWidget {
             path,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.mutedText, fontSize: 13),
+            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
           ),
           onTap: onTap,
         ),

@@ -65,23 +65,71 @@ class Commits extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DriftDatabase(tables: [Semesters, Subjects, Activities, Files, Commits])
+/// The signed-in account's local settings and display info (AGENTS.md
+/// section 8). One row per account inside that account's database file.
+/// The avatar and display name stay on this device only and are never
+/// backed up to the cloud.
+@DataClassName('DbProfile')
+class Profiles extends Table {
+  TextColumn get userId => text()();
+  TextColumn get username => text()();
+  TextColumn get displayName => text().withDefault(const Constant(''))();
+  TextColumn get avatarPath => text().nullable()();
+
+  /// light, dark, or system.
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
+
+  /// indigo, teal, orange, or purple.
+  TextColumn get accentKey => text().withDefault(const Constant('indigo'))();
+  BoolColumn get remindDeadlines =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get remindBackupWeekly =>
+      boolean().withDefault(const Constant(true))();
+
+  /// Backup check-box settings, moved here from SharedPreferences in
+  /// Phase 5A so each account keeps its own.
+  BoolColumn get wifiOnlyBackup =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get includeOlderVersions =>
+      boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {userId};
+}
+
+@DriftDatabase(
+  tables: [Semesters, Subjects, Activities, Files, Commits, Profiles],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _local('shared'));
 
   AppDatabase.forUser(String userId) : super(_local('subtrack_$userId.sqlite'));
 
-  AppDatabase.memory() : super(NativeDatabase.memory());
+  AppDatabase.memory() : super(_memory());
+
+  /// The in-memory database used by tests. Query streams are closed
+  /// synchronously (drift's `closeStreamsSynchronously`): the default
+  /// delayed shutdown schedules `Timer.run` calls that widget tests cannot
+  /// flush while `await close()` runs, deadlocking the fake async zone.
+  static QueryExecutor _memory() => DatabaseConnection(
+    NativeDatabase.memory(),
+    closeStreamsSynchronously: true,
+  );
 
   static QueryExecutor _local(String name) => driftDatabase(name: name);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (m) async => m.createAll(),
+      onUpgrade: (m, from, to) async {
+        if (from < 2) {
+          await m.createTable(profiles);
+        }
+      },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
       },

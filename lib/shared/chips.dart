@@ -16,17 +16,18 @@ String statusLabel(String status) {
   }
 }
 
-/// (text, background) pair for a status, from AGENTS.md section 14.
-(Color, Color) statusColors(String status) {
+/// (text, background) pair for a status, from AGENTS.md section 14. The
+/// chip colors are independent of the accent but flip for dark mode.
+(Color, Color) statusColors(String status, AppPalette palette) {
   switch (status) {
     case 'in_progress':
-      return (AppColors.inProgressText, AppColors.inProgressBg);
+      return (palette.inProgressText, palette.inProgressBg);
     case 'final':
-      return (AppColors.finalText, AppColors.finalBg);
+      return (palette.finalText, palette.finalBg);
     case 'submitted':
-      return (AppColors.submittedText, AppColors.submittedBg);
+      return (palette.submittedText, palette.submittedBg);
     default:
-      return (AppColors.draftText, AppColors.draftBg);
+      return (palette.draftText, palette.draftBg);
   }
 }
 
@@ -38,7 +39,7 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (text, bg) = statusColors(status);
+    final (text, bg) = statusColors(status, context.palette);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -63,12 +64,12 @@ class CurrentChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.finalBg,
+        color: context.palette.finalBg,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Text(
+      child: Text(
         'Current',
-        style: TextStyle(color: AppColors.finalText, fontSize: 12),
+        style: TextStyle(color: context.palette.finalText, fontSize: 12),
       ),
     );
   }
@@ -87,12 +88,12 @@ class DeadlineChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.deadlineBg,
+        color: context.palette.deadlineBg,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         _format.format(deadline),
-        style: const TextStyle(color: AppColors.deadlineText, fontSize: 12),
+        style: TextStyle(color: context.palette.deadlineText, fontSize: 12),
       ),
     );
   }

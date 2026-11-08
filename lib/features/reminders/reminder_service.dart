@@ -35,6 +35,10 @@ class ReminderService {
   bool _initialized = false;
 
   static const _channelId = 'deadlines';
+  static const _remindersChannelId = 'reminders';
+
+  /// Id of the weekly backup nudge; deadline reminders use activity ids.
+  static const _weeklyReminderId = 9001;
 
   /// Activities with a future deadline, nearest first.
   Future<List<UpcomingDeadline>> upcoming() async {
@@ -108,6 +112,44 @@ class ReminderService {
       }
     } catch (e) {
       debugPrint('Reminders: sync failed: $e');
+    }
+  }
+
+  /// Removes every scheduled reminder; used when the Profile toggle is
+  /// turned off (AGENTS.md screen 15).
+  Future<void> clear() async {
+    try {
+      await _ensureInitialized();
+      await _plugin.cancelAll();
+    } catch (e) {
+      debugPrint('Reminders: could not clear reminders: $e');
+    }
+  }
+
+  /// Schedules or removes the weekly nudge to run a manual backup.
+  Future<void> syncWeeklyBackupReminder(bool enabled) async {
+    try {
+      await _ensureInitialized();
+      if (!enabled) {
+        await _plugin.cancel(id: _weeklyReminderId);
+        return;
+      }
+      await _plugin.periodicallyShow(
+        id: _weeklyReminderId,
+        title: 'Back up your work',
+        body: 'Take a minute to back up SubTrack.',
+        repeatInterval: RepeatInterval.weekly,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _remindersChannelId,
+            'Backup reminders',
+            channelDescription: 'Weekly reminders to back up your work',
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint('Reminders: weekly reminder failed: $e');
     }
   }
 

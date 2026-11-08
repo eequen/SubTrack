@@ -2273,6 +2273,654 @@ class CommitsCompanion extends UpdateCompanion<Commit> {
   }
 }
 
+class $ProfilesTable extends Profiles
+    with TableInfo<$ProfilesTable, DbProfile> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usernameMeta = const VerificationMeta(
+    'username',
+  );
+  @override
+  late final GeneratedColumn<String> username = GeneratedColumn<String>(
+    'username',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _avatarPathMeta = const VerificationMeta(
+    'avatarPath',
+  );
+  @override
+  late final GeneratedColumn<String> avatarPath = GeneratedColumn<String>(
+    'avatar_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _themeModeMeta = const VerificationMeta(
+    'themeMode',
+  );
+  @override
+  late final GeneratedColumn<String> themeMode = GeneratedColumn<String>(
+    'theme_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('system'),
+  );
+  static const VerificationMeta _accentKeyMeta = const VerificationMeta(
+    'accentKey',
+  );
+  @override
+  late final GeneratedColumn<String> accentKey = GeneratedColumn<String>(
+    'accent_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('indigo'),
+  );
+  static const VerificationMeta _remindDeadlinesMeta = const VerificationMeta(
+    'remindDeadlines',
+  );
+  @override
+  late final GeneratedColumn<bool> remindDeadlines = GeneratedColumn<bool>(
+    'remind_deadlines',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("remind_deadlines" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _remindBackupWeeklyMeta =
+      const VerificationMeta('remindBackupWeekly');
+  @override
+  late final GeneratedColumn<bool> remindBackupWeekly = GeneratedColumn<bool>(
+    'remind_backup_weekly',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("remind_backup_weekly" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _wifiOnlyBackupMeta = const VerificationMeta(
+    'wifiOnlyBackup',
+  );
+  @override
+  late final GeneratedColumn<bool> wifiOnlyBackup = GeneratedColumn<bool>(
+    'wifi_only_backup',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("wifi_only_backup" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _includeOlderVersionsMeta =
+      const VerificationMeta('includeOlderVersions');
+  @override
+  late final GeneratedColumn<bool> includeOlderVersions = GeneratedColumn<bool>(
+    'include_older_versions',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("include_older_versions" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    userId,
+    username,
+    displayName,
+    avatarPath,
+    themeMode,
+    accentKey,
+    remindDeadlines,
+    remindBackupWeekly,
+    wifiOnlyBackup,
+    includeOlderVersions,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profiles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DbProfile> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('username')) {
+      context.handle(
+        _usernameMeta,
+        username.isAcceptableOrUnknown(data['username']!, _usernameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usernameMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('avatar_path')) {
+      context.handle(
+        _avatarPathMeta,
+        avatarPath.isAcceptableOrUnknown(data['avatar_path']!, _avatarPathMeta),
+      );
+    }
+    if (data.containsKey('theme_mode')) {
+      context.handle(
+        _themeModeMeta,
+        themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
+      );
+    }
+    if (data.containsKey('accent_key')) {
+      context.handle(
+        _accentKeyMeta,
+        accentKey.isAcceptableOrUnknown(data['accent_key']!, _accentKeyMeta),
+      );
+    }
+    if (data.containsKey('remind_deadlines')) {
+      context.handle(
+        _remindDeadlinesMeta,
+        remindDeadlines.isAcceptableOrUnknown(
+          data['remind_deadlines']!,
+          _remindDeadlinesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('remind_backup_weekly')) {
+      context.handle(
+        _remindBackupWeeklyMeta,
+        remindBackupWeekly.isAcceptableOrUnknown(
+          data['remind_backup_weekly']!,
+          _remindBackupWeeklyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wifi_only_backup')) {
+      context.handle(
+        _wifiOnlyBackupMeta,
+        wifiOnlyBackup.isAcceptableOrUnknown(
+          data['wifi_only_backup']!,
+          _wifiOnlyBackupMeta,
+        ),
+      );
+    }
+    if (data.containsKey('include_older_versions')) {
+      context.handle(
+        _includeOlderVersionsMeta,
+        includeOlderVersions.isAcceptableOrUnknown(
+          data['include_older_versions']!,
+          _includeOlderVersionsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {userId};
+  @override
+  DbProfile map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DbProfile(
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      username: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}username'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      avatarPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_path'],
+      ),
+      themeMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_mode'],
+      )!,
+      accentKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accent_key'],
+      )!,
+      remindDeadlines: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}remind_deadlines'],
+      )!,
+      remindBackupWeekly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}remind_backup_weekly'],
+      )!,
+      wifiOnlyBackup: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}wifi_only_backup'],
+      )!,
+      includeOlderVersions: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}include_older_versions'],
+      )!,
+    );
+  }
+
+  @override
+  $ProfilesTable createAlias(String alias) {
+    return $ProfilesTable(attachedDatabase, alias);
+  }
+}
+
+class DbProfile extends DataClass implements Insertable<DbProfile> {
+  final String userId;
+  final String username;
+  final String displayName;
+  final String? avatarPath;
+
+  /// light, dark, or system.
+  final String themeMode;
+
+  /// indigo, teal, orange, or purple.
+  final String accentKey;
+  final bool remindDeadlines;
+  final bool remindBackupWeekly;
+
+  /// Backup check-box settings, moved here from SharedPreferences in
+  /// Phase 5A so each account keeps its own.
+  final bool wifiOnlyBackup;
+  final bool includeOlderVersions;
+  const DbProfile({
+    required this.userId,
+    required this.username,
+    required this.displayName,
+    this.avatarPath,
+    required this.themeMode,
+    required this.accentKey,
+    required this.remindDeadlines,
+    required this.remindBackupWeekly,
+    required this.wifiOnlyBackup,
+    required this.includeOlderVersions,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['user_id'] = Variable<String>(userId);
+    map['username'] = Variable<String>(username);
+    map['display_name'] = Variable<String>(displayName);
+    if (!nullToAbsent || avatarPath != null) {
+      map['avatar_path'] = Variable<String>(avatarPath);
+    }
+    map['theme_mode'] = Variable<String>(themeMode);
+    map['accent_key'] = Variable<String>(accentKey);
+    map['remind_deadlines'] = Variable<bool>(remindDeadlines);
+    map['remind_backup_weekly'] = Variable<bool>(remindBackupWeekly);
+    map['wifi_only_backup'] = Variable<bool>(wifiOnlyBackup);
+    map['include_older_versions'] = Variable<bool>(includeOlderVersions);
+    return map;
+  }
+
+  ProfilesCompanion toCompanion(bool nullToAbsent) {
+    return ProfilesCompanion(
+      userId: Value(userId),
+      username: Value(username),
+      displayName: Value(displayName),
+      avatarPath: avatarPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avatarPath),
+      themeMode: Value(themeMode),
+      accentKey: Value(accentKey),
+      remindDeadlines: Value(remindDeadlines),
+      remindBackupWeekly: Value(remindBackupWeekly),
+      wifiOnlyBackup: Value(wifiOnlyBackup),
+      includeOlderVersions: Value(includeOlderVersions),
+    );
+  }
+
+  factory DbProfile.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DbProfile(
+      userId: serializer.fromJson<String>(json['userId']),
+      username: serializer.fromJson<String>(json['username']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      avatarPath: serializer.fromJson<String?>(json['avatarPath']),
+      themeMode: serializer.fromJson<String>(json['themeMode']),
+      accentKey: serializer.fromJson<String>(json['accentKey']),
+      remindDeadlines: serializer.fromJson<bool>(json['remindDeadlines']),
+      remindBackupWeekly: serializer.fromJson<bool>(json['remindBackupWeekly']),
+      wifiOnlyBackup: serializer.fromJson<bool>(json['wifiOnlyBackup']),
+      includeOlderVersions: serializer.fromJson<bool>(
+        json['includeOlderVersions'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'userId': serializer.toJson<String>(userId),
+      'username': serializer.toJson<String>(username),
+      'displayName': serializer.toJson<String>(displayName),
+      'avatarPath': serializer.toJson<String?>(avatarPath),
+      'themeMode': serializer.toJson<String>(themeMode),
+      'accentKey': serializer.toJson<String>(accentKey),
+      'remindDeadlines': serializer.toJson<bool>(remindDeadlines),
+      'remindBackupWeekly': serializer.toJson<bool>(remindBackupWeekly),
+      'wifiOnlyBackup': serializer.toJson<bool>(wifiOnlyBackup),
+      'includeOlderVersions': serializer.toJson<bool>(includeOlderVersions),
+    };
+  }
+
+  DbProfile copyWith({
+    String? userId,
+    String? username,
+    String? displayName,
+    Value<String?> avatarPath = const Value.absent(),
+    String? themeMode,
+    String? accentKey,
+    bool? remindDeadlines,
+    bool? remindBackupWeekly,
+    bool? wifiOnlyBackup,
+    bool? includeOlderVersions,
+  }) => DbProfile(
+    userId: userId ?? this.userId,
+    username: username ?? this.username,
+    displayName: displayName ?? this.displayName,
+    avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
+    themeMode: themeMode ?? this.themeMode,
+    accentKey: accentKey ?? this.accentKey,
+    remindDeadlines: remindDeadlines ?? this.remindDeadlines,
+    remindBackupWeekly: remindBackupWeekly ?? this.remindBackupWeekly,
+    wifiOnlyBackup: wifiOnlyBackup ?? this.wifiOnlyBackup,
+    includeOlderVersions: includeOlderVersions ?? this.includeOlderVersions,
+  );
+  DbProfile copyWithCompanion(ProfilesCompanion data) {
+    return DbProfile(
+      userId: data.userId.present ? data.userId.value : this.userId,
+      username: data.username.present ? data.username.value : this.username,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      avatarPath: data.avatarPath.present
+          ? data.avatarPath.value
+          : this.avatarPath,
+      themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      accentKey: data.accentKey.present ? data.accentKey.value : this.accentKey,
+      remindDeadlines: data.remindDeadlines.present
+          ? data.remindDeadlines.value
+          : this.remindDeadlines,
+      remindBackupWeekly: data.remindBackupWeekly.present
+          ? data.remindBackupWeekly.value
+          : this.remindBackupWeekly,
+      wifiOnlyBackup: data.wifiOnlyBackup.present
+          ? data.wifiOnlyBackup.value
+          : this.wifiOnlyBackup,
+      includeOlderVersions: data.includeOlderVersions.present
+          ? data.includeOlderVersions.value
+          : this.includeOlderVersions,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DbProfile(')
+          ..write('userId: $userId, ')
+          ..write('username: $username, ')
+          ..write('displayName: $displayName, ')
+          ..write('avatarPath: $avatarPath, ')
+          ..write('themeMode: $themeMode, ')
+          ..write('accentKey: $accentKey, ')
+          ..write('remindDeadlines: $remindDeadlines, ')
+          ..write('remindBackupWeekly: $remindBackupWeekly, ')
+          ..write('wifiOnlyBackup: $wifiOnlyBackup, ')
+          ..write('includeOlderVersions: $includeOlderVersions')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    userId,
+    username,
+    displayName,
+    avatarPath,
+    themeMode,
+    accentKey,
+    remindDeadlines,
+    remindBackupWeekly,
+    wifiOnlyBackup,
+    includeOlderVersions,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DbProfile &&
+          other.userId == this.userId &&
+          other.username == this.username &&
+          other.displayName == this.displayName &&
+          other.avatarPath == this.avatarPath &&
+          other.themeMode == this.themeMode &&
+          other.accentKey == this.accentKey &&
+          other.remindDeadlines == this.remindDeadlines &&
+          other.remindBackupWeekly == this.remindBackupWeekly &&
+          other.wifiOnlyBackup == this.wifiOnlyBackup &&
+          other.includeOlderVersions == this.includeOlderVersions);
+}
+
+class ProfilesCompanion extends UpdateCompanion<DbProfile> {
+  final Value<String> userId;
+  final Value<String> username;
+  final Value<String> displayName;
+  final Value<String?> avatarPath;
+  final Value<String> themeMode;
+  final Value<String> accentKey;
+  final Value<bool> remindDeadlines;
+  final Value<bool> remindBackupWeekly;
+  final Value<bool> wifiOnlyBackup;
+  final Value<bool> includeOlderVersions;
+  final Value<int> rowid;
+  const ProfilesCompanion({
+    this.userId = const Value.absent(),
+    this.username = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.avatarPath = const Value.absent(),
+    this.themeMode = const Value.absent(),
+    this.accentKey = const Value.absent(),
+    this.remindDeadlines = const Value.absent(),
+    this.remindBackupWeekly = const Value.absent(),
+    this.wifiOnlyBackup = const Value.absent(),
+    this.includeOlderVersions = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ProfilesCompanion.insert({
+    required String userId,
+    required String username,
+    this.displayName = const Value.absent(),
+    this.avatarPath = const Value.absent(),
+    this.themeMode = const Value.absent(),
+    this.accentKey = const Value.absent(),
+    this.remindDeadlines = const Value.absent(),
+    this.remindBackupWeekly = const Value.absent(),
+    this.wifiOnlyBackup = const Value.absent(),
+    this.includeOlderVersions = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : userId = Value(userId),
+       username = Value(username);
+  static Insertable<DbProfile> custom({
+    Expression<String>? userId,
+    Expression<String>? username,
+    Expression<String>? displayName,
+    Expression<String>? avatarPath,
+    Expression<String>? themeMode,
+    Expression<String>? accentKey,
+    Expression<bool>? remindDeadlines,
+    Expression<bool>? remindBackupWeekly,
+    Expression<bool>? wifiOnlyBackup,
+    Expression<bool>? includeOlderVersions,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (userId != null) 'user_id': userId,
+      if (username != null) 'username': username,
+      if (displayName != null) 'display_name': displayName,
+      if (avatarPath != null) 'avatar_path': avatarPath,
+      if (themeMode != null) 'theme_mode': themeMode,
+      if (accentKey != null) 'accent_key': accentKey,
+      if (remindDeadlines != null) 'remind_deadlines': remindDeadlines,
+      if (remindBackupWeekly != null)
+        'remind_backup_weekly': remindBackupWeekly,
+      if (wifiOnlyBackup != null) 'wifi_only_backup': wifiOnlyBackup,
+      if (includeOlderVersions != null)
+        'include_older_versions': includeOlderVersions,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ProfilesCompanion copyWith({
+    Value<String>? userId,
+    Value<String>? username,
+    Value<String>? displayName,
+    Value<String?>? avatarPath,
+    Value<String>? themeMode,
+    Value<String>? accentKey,
+    Value<bool>? remindDeadlines,
+    Value<bool>? remindBackupWeekly,
+    Value<bool>? wifiOnlyBackup,
+    Value<bool>? includeOlderVersions,
+    Value<int>? rowid,
+  }) {
+    return ProfilesCompanion(
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
+      avatarPath: avatarPath ?? this.avatarPath,
+      themeMode: themeMode ?? this.themeMode,
+      accentKey: accentKey ?? this.accentKey,
+      remindDeadlines: remindDeadlines ?? this.remindDeadlines,
+      remindBackupWeekly: remindBackupWeekly ?? this.remindBackupWeekly,
+      wifiOnlyBackup: wifiOnlyBackup ?? this.wifiOnlyBackup,
+      includeOlderVersions: includeOlderVersions ?? this.includeOlderVersions,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (username.present) {
+      map['username'] = Variable<String>(username.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (avatarPath.present) {
+      map['avatar_path'] = Variable<String>(avatarPath.value);
+    }
+    if (themeMode.present) {
+      map['theme_mode'] = Variable<String>(themeMode.value);
+    }
+    if (accentKey.present) {
+      map['accent_key'] = Variable<String>(accentKey.value);
+    }
+    if (remindDeadlines.present) {
+      map['remind_deadlines'] = Variable<bool>(remindDeadlines.value);
+    }
+    if (remindBackupWeekly.present) {
+      map['remind_backup_weekly'] = Variable<bool>(remindBackupWeekly.value);
+    }
+    if (wifiOnlyBackup.present) {
+      map['wifi_only_backup'] = Variable<bool>(wifiOnlyBackup.value);
+    }
+    if (includeOlderVersions.present) {
+      map['include_older_versions'] = Variable<bool>(
+        includeOlderVersions.value,
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfilesCompanion(')
+          ..write('userId: $userId, ')
+          ..write('username: $username, ')
+          ..write('displayName: $displayName, ')
+          ..write('avatarPath: $avatarPath, ')
+          ..write('themeMode: $themeMode, ')
+          ..write('accentKey: $accentKey, ')
+          ..write('remindDeadlines: $remindDeadlines, ')
+          ..write('remindBackupWeekly: $remindBackupWeekly, ')
+          ..write('wifiOnlyBackup: $wifiOnlyBackup, ')
+          ..write('includeOlderVersions: $includeOlderVersions, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2281,6 +2929,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ActivitiesTable activities = $ActivitiesTable(this);
   late final $FilesTable files = $FilesTable(this);
   late final $CommitsTable commits = $CommitsTable(this);
+  late final $ProfilesTable profiles = $ProfilesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2291,6 +2940,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     activities,
     files,
     commits,
+    profiles,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4307,6 +4957,314 @@ typedef $$CommitsTableProcessedTableManager =
       Commit,
       PrefetchHooks Function({bool fileId})
     >;
+typedef $$ProfilesTableCreateCompanionBuilder = ProfilesCompanion Function({
+  required String userId,
+  required String username,
+  Value<String> displayName,
+  Value<String?> avatarPath,
+  Value<String> themeMode,
+  Value<String> accentKey,
+  Value<bool> remindDeadlines,
+  Value<bool> remindBackupWeekly,
+  Value<bool> wifiOnlyBackup,
+  Value<bool> includeOlderVersions,
+  Value<int> rowid,
+});
+typedef $$ProfilesTableUpdateCompanionBuilder = ProfilesCompanion Function({
+  Value<String> userId,
+  Value<String> username,
+  Value<String> displayName,
+  Value<String?> avatarPath,
+  Value<String> themeMode,
+  Value<String> accentKey,
+  Value<bool> remindDeadlines,
+  Value<bool> remindBackupWeekly,
+  Value<bool> wifiOnlyBackup,
+  Value<bool> includeOlderVersions,
+  Value<int> rowid,
+});
+
+class $$ProfilesTableFilterComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accentKey => $composableBuilder(
+    column: $table.accentKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get remindDeadlines => $composableBuilder(
+    column: $table.remindDeadlines,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get remindBackupWeekly => $composableBuilder(
+    column: $table.remindBackupWeekly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get wifiOnlyBackup => $composableBuilder(
+    column: $table.wifiOnlyBackup,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get includeOlderVersions => $composableBuilder(
+    column: $table.includeOlderVersions,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accentKey => $composableBuilder(
+    column: $table.accentKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get remindDeadlines => $composableBuilder(
+    column: $table.remindDeadlines,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get remindBackupWeekly => $composableBuilder(
+    column: $table.remindBackupWeekly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get wifiOnlyBackup => $composableBuilder(
+    column: $table.wifiOnlyBackup,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get includeOlderVersions => $composableBuilder(
+    column: $table.includeOlderVersions,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProfilesTable> {
+  $$ProfilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get username =>
+      $composableBuilder(column: $table.username, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get themeMode =>
+      $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<String> get accentKey =>
+      $composableBuilder(column: $table.accentKey, builder: (column) => column);
+
+  GeneratedColumn<bool> get remindDeadlines => $composableBuilder(
+    column: $table.remindDeadlines,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get remindBackupWeekly => $composableBuilder(
+    column: $table.remindBackupWeekly,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get wifiOnlyBackup => $composableBuilder(
+    column: $table.wifiOnlyBackup,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get includeOlderVersions => $composableBuilder(
+    column: $table.includeOlderVersions,
+    builder: (column) => column,
+  );
+}
+
+class $$ProfilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ProfilesTable,
+          DbProfile,
+          $$ProfilesTableFilterComposer,
+          $$ProfilesTableOrderingComposer,
+          $$ProfilesTableAnnotationComposer,
+          $$ProfilesTableCreateCompanionBuilder,
+          $$ProfilesTableUpdateCompanionBuilder,
+          (DbProfile, BaseReferences<_$AppDatabase, $ProfilesTable, DbProfile>),
+          DbProfile,
+          PrefetchHooks Function()
+        > {
+  $$ProfilesTableTableManager(_$AppDatabase db, $ProfilesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfilesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfilesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> userId = const Value.absent(),
+                Value<String> username = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
+                Value<String> accentKey = const Value.absent(),
+                Value<bool> remindDeadlines = const Value.absent(),
+                Value<bool> remindBackupWeekly = const Value.absent(),
+                Value<bool> wifiOnlyBackup = const Value.absent(),
+                Value<bool> includeOlderVersions = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ProfilesCompanion(
+                userId: userId,
+                username: username,
+                displayName: displayName,
+                avatarPath: avatarPath,
+                themeMode: themeMode,
+                accentKey: accentKey,
+                remindDeadlines: remindDeadlines,
+                remindBackupWeekly: remindBackupWeekly,
+                wifiOnlyBackup: wifiOnlyBackup,
+                includeOlderVersions: includeOlderVersions,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String userId,
+                required String username,
+                Value<String> displayName = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
+                Value<String> accentKey = const Value.absent(),
+                Value<bool> remindDeadlines = const Value.absent(),
+                Value<bool> remindBackupWeekly = const Value.absent(),
+                Value<bool> wifiOnlyBackup = const Value.absent(),
+                Value<bool> includeOlderVersions = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ProfilesCompanion.insert(
+                userId: userId,
+                username: username,
+                displayName: displayName,
+                avatarPath: avatarPath,
+                themeMode: themeMode,
+                accentKey: accentKey,
+                remindDeadlines: remindDeadlines,
+                remindBackupWeekly: remindBackupWeekly,
+                wifiOnlyBackup: wifiOnlyBackup,
+                includeOlderVersions: includeOlderVersions,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ProfilesTable, DbProfile>(table),
+                  BaseReferences<_$AppDatabase, $ProfilesTable, DbProfile>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ProfilesTable,
+      DbProfile,
+      $$ProfilesTableFilterComposer,
+      $$ProfilesTableOrderingComposer,
+      $$ProfilesTableAnnotationComposer,
+      $$ProfilesTableCreateCompanionBuilder,
+      $$ProfilesTableUpdateCompanionBuilder,
+      (DbProfile, BaseReferences<_$AppDatabase, $ProfilesTable, DbProfile>),
+      DbProfile,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4321,4 +5279,6 @@ class $AppDatabaseManager {
       $$FilesTableTableManager(_db, _db.files);
   $$CommitsTableTableManager get commits =>
       $$CommitsTableTableManager(_db, _db.commits);
+  $$ProfilesTableTableManager get profiles =>
+      $$ProfilesTableTableManager(_db, _db.profiles);
 }

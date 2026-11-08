@@ -53,10 +53,6 @@ class SubjectsPage extends ConsumerWidget {
                             semesterId: selectedId,
                           ),
                   ),
-                  OutlinedButton(
-                    onPressed: () => context.go('/semesters'),
-                    child: const Text('Change'),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -285,8 +281,8 @@ class _DueSoonCard extends ConsumerWidget {
                                   ),
                                   Text(
                                     upcoming.subjectName,
-                                    style: const TextStyle(
-                                      color: AppColors.mutedText,
+                                    style: TextStyle(
+                                      color: context.palette.mutedText,
                                       fontSize: 12,
                                     ),
                                   ),

@@ -12,7 +12,7 @@ Future<ProviderContainer> _container() async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final auth = FakeAuthService(prefs: prefs);
-  await auth.signIn(email: 'maria@school.edu', password: 'secret');
+  await auth.signIn(identifier: 'maria@school.edu', password: 'secret');
   final db = AppDatabase.memory();
   final container = ProviderContainer(
     overrides: [

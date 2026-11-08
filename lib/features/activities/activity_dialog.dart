@@ -165,9 +165,11 @@ class _ActivityDialogState extends State<_ActivityDialog> {
                   ChoiceChip(
                     label: Text(statusLabel(status)),
                     selected: _status == status,
-                    selectedColor: statusColors(status).$2,
+                    selectedColor: statusColors(status, context.palette).$2,
                     labelStyle: TextStyle(
-                      color: _status == status ? statusColors(status).$1 : null,
+                      color: _status == status
+                          ? statusColors(status, context.palette).$1
+                          : null,
                     ),
                     onSelected: (_) => setState(() => _status = status),
                   ),
@@ -197,9 +199,12 @@ class _ActivityDialogState extends State<_ActivityDialog> {
             ),
             if (_deadline != null) ...[
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'A reminder will appear when this is due.',
-                style: TextStyle(color: AppColors.mutedText, fontSize: 12),
+                style: TextStyle(
+                  color: context.palette.mutedText,
+                  fontSize: 12,
+                ),
               ),
             ],
             const SizedBox(height: 12),
