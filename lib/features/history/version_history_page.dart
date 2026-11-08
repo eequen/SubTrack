@@ -152,6 +152,9 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
                           onOpen: name == null
                               ? null
                               : () => _open(name, commit),
+                          onEdit: () => context.push(
+                            '/files/$_fileId/edit?commit=${commit.id}',
+                          ),
                           onRestore: () => _restore(commit),
                         );
                       },
@@ -207,12 +210,14 @@ class _CommitCard extends StatelessWidget {
     required this.commit,
     required this.isCurrent,
     required this.onOpen,
+    required this.onEdit,
     required this.onRestore,
   });
 
   final Commit commit;
   final bool isCurrent;
   final VoidCallback? onOpen;
+  final VoidCallback onEdit;
   final VoidCallback onRestore;
 
   @override
@@ -248,6 +253,8 @@ class _CommitCard extends StatelessWidget {
             Row(
               children: [
                 CardButton(label: 'Open', onPressed: onOpen),
+                const SizedBox(width: 8),
+                CardButton(label: 'Edit', onPressed: onEdit),
                 if (!isCurrent) ...[
                   const SizedBox(width: 8),
                   CardButton(label: 'Restore', onPressed: onRestore),

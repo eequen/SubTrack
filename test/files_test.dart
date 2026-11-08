@@ -232,7 +232,8 @@ void main() {
     expect(v3.id, v3Id);
     expect(v3.versionNo, 3);
     expect(v3.message, 'Restored from v1');
-    expect(v3.restoredFromCommitId, v1.id);
+    expect(v3.kind, 'restore');
+    expect(v3.basedOnCommitId, v1.id);
     expect(v3.blobHash, v1.blobHash);
     expect(v3.sizeBytes, v1.sizeBytes);
     // v1 and v2 are untouched.
@@ -287,7 +288,8 @@ void main() {
     final v4 = after.first;
     expect(v4.versionNo, 4);
     expect(v4.message, 'Restored from v2');
-    expect(v4.restoredFromCommitId, v2.id);
+    expect(v4.kind, 'restore');
+    expect(v4.basedOnCommitId, v2.id);
     expect(v4.blobHash, v2.blobHash);
     expect(v4.sizeBytes, v2.sizeBytes);
     expect(await store.read(v4.blobHash), await store.read(v2.blobHash));

@@ -178,7 +178,8 @@ void main() {
       expect(v4.message, 'Restored from v2');
       final v2 = commits.firstWhere((c) => c.versionNo == 2);
       expect(v4.blobHash, v2.blobHash);
-      expect(v4.restoredFromCommitId, v2.id);
+      expect(v4.kind, 'restore');
+      expect(v4.basedOnCommitId, v2.id);
       final item = await FileRepo(
         setup.db,
         BlobStore(Future.value(setup.tmp)),

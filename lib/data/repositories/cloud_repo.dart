@@ -267,7 +267,7 @@ class CloudRepo {
     }
 
     // 3. Keep only the commits whose contents are on this device now, and
-    // keep `restored from` links only when their target came back too.
+    // keep `based on` links only when their target came back too.
     final keptIds = <int>{
       for (final commit in allCommits)
         if (await blobs.exists(commit.blobHash)) commit.id,
@@ -283,8 +283,9 @@ class CloudRepo {
             blobHash: commit.blobHash,
             sizeBytes: commit.sizeBytes,
             mimeType: commit.mimeType,
-            restoredFromCommitId: keptIds.contains(commit.restoredFromCommitId)
-                ? commit.restoredFromCommitId
+            kind: commit.kind,
+            basedOnCommitId: keptIds.contains(commit.basedOnCommitId)
+                ? commit.basedOnCommitId
                 : null,
             createdAt: commit.createdAt,
           ),
@@ -412,9 +413,10 @@ class CloudRepo {
     blobHash: row['blob_hash'] as String,
     sizeBytes: _int(row['size_bytes']),
     mimeType: row['mime_type'] as String,
-    restoredFromCommitId: row['restored_from_commit_id'] == null
+    kind: (row['kind'] as String?) ?? 'upload',
+    basedOnCommitId: row['based_on_commit_id'] == null
         ? null
-        : _int(row['restored_from_commit_id']),
+        : _int(row['based_on_commit_id']),
     createdAt: _date(row['created_at']),
   );
 
@@ -523,7 +525,8 @@ class CloudRepo {
     'blob_hash': commit.blobHash,
     'size_bytes': commit.sizeBytes,
     'mime_type': commit.mimeType,
-    'restored_from_commit_id': commit.restoredFromCommitId,
+    'kind': commit.kind,
+    'based_on_commit_id': commit.basedOnCommitId,
     'created_at': _iso(commit.createdAt),
   };
 }
