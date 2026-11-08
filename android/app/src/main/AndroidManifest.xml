@@ -5,6 +5,14 @@
          exact alarm timing. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Android 11+ package visibility: lets the edit flow find installed
+         ACTION_EDIT apps so it can grant write access to the working copy. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.EDIT"/>
+            <data android:mimeType="*/*"/>
+        </intent>
+    </queries>
     <application
         android:label="subtrack"
         android:name="${applicationName}"

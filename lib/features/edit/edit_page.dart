@@ -216,6 +216,8 @@ class _EditPageState extends ConsumerState<EditPage>
           await _openEditor();
         } else if (choice == 'discard') {
           await _confirmDiscard();
+        } else if (choice == 'pick') {
+          await _pickElsewhere();
         }
         return;
       }
@@ -238,17 +240,22 @@ class _EditPageState extends ConsumerState<EditPage>
       builder: (context) => AlertDialog(
         title: const Text('No changes detected'),
         content: const Text(
-          'The file is unchanged. Keep editing in the external app, or '
-          'discard this working copy?',
+          'The working copy is unchanged. Some editors, including Word, '
+          'save a copy instead of updating the original. Pick the saved '
+          'file, keep editing, or discard this working copy.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop('discard'),
             child: const Text('Discard'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop('keep'),
             child: const Text('Keep editing'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop('pick'),
+            child: const Text('Pick saved copy'),
           ),
         ],
       ),

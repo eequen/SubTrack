@@ -45,12 +45,26 @@ class MainActivity : FlutterActivity() {
                     "$packageName.fileprovider",
                     file,
                 )
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 val intent = Intent(Intent.ACTION_EDIT).apply {
                     setDataAndType(uri, mimeType)
                     clipData = ClipData.newRawUri("working copy", uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    addFlags(flags)
                 }
+
+                // Some editors (notably Word) move the URI into their own
+                // activity/process and lose the one-shot intent grant. Grant
+                // the package explicitly so saving back to the original file
+                // is allowed for the whole editing session.
+                for (handler in packageManager.queryIntentActivities(intent, 0)) {
+                    grantUriPermission(
+                        handler.activityInfo.packageName,
+                        uri,
+                        flags,
+                    )
+                }
+
                 startActivity(intent)
                 result.success(true)
             } catch (e: ActivityNotFoundException) {
