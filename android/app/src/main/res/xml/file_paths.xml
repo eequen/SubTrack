@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Working copies live in the app documents folder (app_flutter/edits/...).
-     Only these files are shared with external editors, through ACTION_EDIT. -->
+     Flutter's documents folder is app_flutter, which is NOT under files/ or
+     cache/ on Android, so a root-path rule is required for FileProvider.
+     The provider is not exported; only the specific working-copy URI gets a
+     temporary read/write grant when it is handed to an editor. -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path name="app_files" path="." />
     <cache-path name="cache" path="." />
+    <root-path name="app_data" path="." />
 </paths>
