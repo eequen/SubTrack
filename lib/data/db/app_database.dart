@@ -61,8 +61,25 @@ class Commits extends Table {
   TextColumn get blobHash => text()();
   IntColumn get sizeBytes => integer()();
   TextColumn get mimeType => text().withDefault(const Constant(''))();
-  IntColumn get restoredFromCommitId => integer().nullable()();
+
+  /// upload, edit, or restore (AGENTS.md Phase 5B).
+  TextColumn get kind => text().withDefault(const Constant('upload'))();
+
+  /// The version this commit was edited or restored from. Null for uploads.
+  IntColumn get basedOnCommitId => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// A working copy opened in an external editor (AGENTS.md Phase 5B).
+/// Sessions are local-only: they are never included in a cloud backup.
+class EditSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get fileId =>
+      integer().references(Files, #id, onDelete: KeyAction.cascade)();
+  IntColumn get baseCommitId =>
+      integer().references(Commits, #id, onDelete: KeyAction.cascade)();
+  TextColumn get workingPath => text()();
+  DateTimeColumn get startedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 /// The signed-in account's local settings and display info (AGENTS.md
@@ -98,7 +115,15 @@ class Profiles extends Table {
 }
 
 @DriftDatabase(
-  tables: [Semesters, Subjects, Activities, Files, Commits, Profiles],
+  tables: [
+    Semesters,
+    Subjects,
+    Activities,
+    Files,
+    Commits,
+    EditSessions,
+    Profiles,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _local('shared'));
@@ -119,7 +144,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor _local(String name) => driftDatabase(name: name);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -128,6 +153,27 @@ class AppDatabase extends _$AppDatabase {
       onUpgrade: (m, from, to) async {
         if (from < 2) {
           await m.createTable(profiles);
+        }
+        if (from < 3) {
+          // v3 (Phase 5B): `kind` and `based_on_commit_id` replace
+          // `restored_from_commit_id`. Existing restore commits keep their
+          // link; everything else becomes an upload.
+          await m.alterTable(
+            TableMigration(
+              commits,
+              newColumns: [commits.kind, commits.basedOnCommitId],
+              columnTransformer: {
+                commits.kind: const CustomExpression<String>(
+                  "CASE WHEN restored_from_commit_id IS NULL "
+                  "THEN 'upload' ELSE 'restore' END",
+                ),
+                commits.basedOnCommitId: const CustomExpression<Object>(
+                  'restored_from_commit_id',
+                ),
+              },
+            ),
+          );
+          await m.createTable(editSessions);
         }
       },
       beforeOpen: (details) async {

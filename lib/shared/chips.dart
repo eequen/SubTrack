@@ -75,6 +75,27 @@ class CurrentChip extends StatelessWidget {
   }
 }
 
+/// Blue-violet "Editing" pill for a file with an unfinished external edit
+/// (AGENTS.md Phase 5B).
+class EditingChip extends StatelessWidget {
+  const EditingChip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.palette.inProgressBg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Editing',
+        style: TextStyle(color: context.palette.inProgressText, fontSize: 12),
+      ),
+    );
+  }
+}
+
 /// Amber deadline pill (mockups 4, 5, 6).
 class DeadlineChip extends StatelessWidget {
   const DeadlineChip({required this.deadline, super.key});

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/features/edit/edit_providers.dart';
 
 /// Bottom navigation shell: Search, Home (middle), Profile. Visible on the
 /// home branch screens, Search, Profile, and Cloud backup (AGENTS.md
 /// section 14). Hidden on login, signup, semesters, and commit screens,
 /// which live outside the shell.
-class ScaffoldWithNav extends StatelessWidget {
+class ScaffoldWithNav extends ConsumerWidget {
   const ScaffoldWithNav({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
@@ -19,7 +21,9 @@ class ScaffoldWithNav extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Once per app start, drop edit sessions whose working copy vanished.
+    ref.watch(editSessionCleanupProvider);
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(

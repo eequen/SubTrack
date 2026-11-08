@@ -61,7 +61,8 @@ create table public.commits (
   blob_hash text not null,
   size_bytes bigint not null,
   mime_type text not null default '',
-  restored_from_commit_id bigint,
+  kind text not null default 'upload',
+  based_on_commit_id bigint,
   created_at timestamptz not null,
   primary key (user_id, id)
 );

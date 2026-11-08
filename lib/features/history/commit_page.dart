@@ -5,16 +5,39 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/core/hashing.dart';
 import 'package:subtrack/core/mime.dart';
+import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_pick.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 
+/// Arguments for committing the result of an edit session (AGENTS.md 5B).
+class CommitArgs {
+  const CommitArgs({
+    required this.picked,
+    required this.basedOnCommitId,
+    required this.baseVersionNo,
+    required this.sessionId,
+    required this.prefillMessage,
+    required this.returnPath,
+  });
+
+  final PickedUpload picked;
+  final int basedOnCommitId;
+  final int baseVersionNo;
+  final int sessionId;
+  final String prefillMessage;
+  final String returnPath;
+}
+
 /// Screen 8 from AGENTS.md section 14: pick the updated file, see the new
 /// content hash, write a message, commit as the next version.
 class CommitPage extends ConsumerStatefulWidget {
-  const CommitPage({required this.fileId, super.key});
+  const CommitPage({required this.fileId, this.args, super.key});
 
   final String fileId;
+
+  /// Non-null when the content came from an external-editor session.
+  final CommitArgs? args;
 
   @override
   ConsumerState<CommitPage> createState() => _CommitPageState();
@@ -27,6 +50,17 @@ class _CommitPageState extends ConsumerState<CommitPage> {
   PickedUpload? _picked;
   String? _hash;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final args = widget.args;
+    if (args != null) {
+      _picked = args.picked;
+      _hash = sha256Hex(args.picked.bytes);
+      _message.text = args.prefillMessage;
+    }
+  }
 
   @override
   void dispose() {
@@ -69,6 +103,7 @@ class _CommitPageState extends ConsumerState<CommitPage> {
 
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final args = widget.args;
     try {
       await ref.read(blobStoreProvider).saveBytes(picked.bytes);
       final commits = ref.read(commitRepoProvider);
@@ -82,12 +117,22 @@ class _CommitPageState extends ConsumerState<CommitPage> {
         blobHash: hash,
         sizeBytes: picked.bytes.length,
         mimeType: mimeForName(picked.name),
+        kind: args == null ? 'upload' : 'edit',
+        basedOnCommitId: args?.basedOnCommitId,
       );
+      if (args != null) {
+        // The working copy is no longer needed once the new version exists.
+        await ref.read(editSessionRepoProvider).discard(args.sessionId);
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('Committed as v$versionNo.')),
       );
-      _back();
+      if (args != null) {
+        context.go(args.returnPath);
+      } else {
+        _back();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -171,6 +216,7 @@ class _CommitPageState extends ConsumerState<CommitPage> {
                         identical: identical,
                         hash: _hash!,
                         currentVersionNo: current?.versionNo,
+                        editFromVersionNo: widget.args?.baseVersionNo,
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -289,14 +335,19 @@ class _HashBanner extends StatelessWidget {
     required this.identical,
     required this.hash,
     required this.currentVersionNo,
+    this.editFromVersionNo,
   });
 
   final bool identical;
   final String hash;
   final int? currentVersionNo;
 
+  /// Set when the content came back from an external editor.
+  final int? editFromVersionNo;
+
   @override
   Widget build(BuildContext context) {
+    final editFrom = editFromVersionNo;
     final (text, bg, icon, label) = identical
         ? (
             context.palette.deadlineText,
@@ -309,7 +360,9 @@ class _HashBanner extends StatelessWidget {
             context.palette.finalText,
             context.palette.finalBg,
             Icons.check_circle_outline,
-            'New content detected — SHA-256 ${hash.substring(0, 12)}…',
+            editFrom == null
+                ? 'New content detected — SHA-256 ${hash.substring(0, 12)}…'
+                : 'Changes detected from your edit of v$editFrom.',
           );
     return Container(
       padding: const EdgeInsets.all(12),
