@@ -37,9 +37,11 @@ Ask for the two cloud values in the group chat, then:
   — this uses `.vscode/launch.json`, which points at your `config.json`
 - **Terminal:** `flutter run --dart-define-from-file=config.json`
 
-No `config.json` yet? The app still opens in **FakeAuth mode** (any
-username/password works, no cloud) — fine for UI work, useless for cloud
-backups.
+No `config.json` yet? For UI work only, run with
+`--dart-define=USE_FAKE_AUTH=true` to use **FakeAuth mode** (any
+username/password works, no cloud). Without that flag, login refuses
+credentials and tells you to rebuild with `config.json`, so a test APK
+can never silently accept fake accounts.
 
 ## Just want to test, not code?
 

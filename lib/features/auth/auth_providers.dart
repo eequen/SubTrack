@@ -12,6 +12,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 const String _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const String _supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
+/// Explicit opt-in for local UI work without cloud credentials. Never set
+/// this in a build that is handed to testers: FakeAuth accepts any password.
+const bool _useFakeAuth = bool.fromEnvironment('USE_FAKE_AUTH');
+
 /// True when the app was built with Supabase credentials.
 bool get supabaseConfigured =>
     _supabaseUrl.isNotEmpty && _supabaseKey.isNotEmpty;
@@ -37,7 +41,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
   if (supabaseConfigured) {
     return SupabaseAuthService.app(prefs: prefs);
   }
-  return FakeAuthService(prefs: prefs);
+  if (_useFakeAuth) {
+    return FakeAuthService(prefs: prefs);
+  }
+  return const UnconfiguredAuthService();
 });
 
 /// Holds the signed-in user. The router watches this and rebuilds on

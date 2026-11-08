@@ -47,6 +47,26 @@ void main() {
     expect(auth.currentUser?.email, 'maria@school.edu');
   });
 
+  test('an unconfigured build refuses credentials instead of faking', () async {
+    const auth = UnconfiguredAuthService();
+    expect(auth.currentUser, isNull);
+
+    await expectLater(
+      auth.signIn(identifier: 'not_created', password: 'anything'),
+      throwsA(isA<AuthException>()),
+    );
+    await expectLater(
+      auth.signUp(
+        email: 'nobody@example.com',
+        username: 'not_created',
+        displayName: 'Nobody',
+        password: 'anything',
+      ),
+      throwsA(isA<AuthException>()),
+    );
+    expect(auth.currentUser, isNull);
+  });
+
   test('session persists across instances, signOut clears it', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

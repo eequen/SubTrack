@@ -47,10 +47,46 @@ abstract class AuthService {
   Future<void> changePassword({required String newPassword});
 }
 
+/// Refuses every sign-in when the build has no Supabase credentials and
+/// fake auth was not explicitly enabled. This prevents a misconfigured APK
+/// from silently accepting any username or password.
+class UnconfiguredAuthService implements AuthService {
+  const UnconfiguredAuthService();
+
+  static const String _message =
+      'This build is not connected to the cloud. Rebuild it with '
+      '--dart-define-from-file=config.json.';
+
+  @override
+  AppUser? get currentUser => null;
+
+  @override
+  Future<void> signIn({
+    required String identifier,
+    required String password,
+  }) async => throw const AuthException(_message);
+
+  @override
+  Future<void> signUp({
+    required String email,
+    required String username,
+    required String displayName,
+    required String password,
+  }) async => throw const AuthException(_message);
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> changePassword({required String newPassword}) async =>
+      throw const AuthException(_message);
+}
+
 /// Development stand-in for Supabase auth. Accepts any non-empty
 /// identifier (email or username) and password, and persists the session
 /// in [SharedPreferences] so the app can open offline after the first
-/// sign-in (AGENTS.md constraint 2).
+/// sign-in (AGENTS.md constraint 2). Enabled only with
+/// `--dart-define=USE_FAKE_AUTH=true`; tests construct it directly.
 class FakeAuthService implements AuthService {
   FakeAuthService({required this.prefs}) {
     final email = prefs.getString(_sessionKey);
