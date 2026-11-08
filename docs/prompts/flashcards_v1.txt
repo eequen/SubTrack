@@ -1,0 +1,18 @@
+You are creating study flashcards from the document attached to this message.
+
+Follow these rules exactly:
+1. Use ONLY facts stated in the document. Do not add outside knowledge.
+2. Make 20 to 40 cards. One fact per card.
+3. "front" is a short question or a term (maximum 180 characters).
+4. "back" is the answer or definition (maximum 500 characters).
+5. Write both sides in the same language as the document.
+6. Do not duplicate cards. Do not include headers, page numbers, or your own comments.
+7. Plain text only: no HTML, no markdown, no bullet symbols. You may use \n for a line break inside "back".
+8. "deck" is a short name for the document (maximum 80 characters).
+9. Reply with ONE JSON object and nothing else. Do not wrap it in code fences.
+
+Output exactly this shape:
+{"schema":"subtrack.cards.v1","deck":"Short deck name","cards":[{"front":"Question or term","back":"Answer or definition"}]}
+
+If you cannot read the attached document, reply with exactly:
+{"schema":"subtrack.cards.v1","error":"cannot read document"}
