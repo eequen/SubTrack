@@ -27,6 +27,7 @@ class SubTrackApp extends ConsumerWidget {
     final accent = accentByKey(profile?.accentKey);
     return MaterialApp.router(
       title: 'SubTrack',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light(accent.key),
       darkTheme: AppTheme.dark(accent.key),
       themeMode: _themeMode(profile?.themeMode),
