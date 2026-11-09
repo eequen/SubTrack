@@ -7,6 +7,7 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
 import 'package:subtrack/shared/ui_components.dart';
@@ -81,6 +82,7 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
       await ref
           .read(commitRepoProvider)
           .restoreAsNewCommit(fileId: _fileId, fromCommitId: commit.id);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       _snack('Restored from v${commit.versionNo}.');
     } catch (e) {
       _snack('Could not restore: $e');

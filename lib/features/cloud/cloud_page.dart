@@ -12,6 +12,7 @@ import 'package:subtrack/data/repositories/cloud_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/backup/backup_providers.dart';
 import 'package:subtrack/features/cloud/cloud_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/ui_components.dart';
@@ -110,6 +111,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
             'subtrack_last_cloud_backup',
             DateTime.now().toUtc().toIso8601String(),
           );
+      await ref.read(localBackupPendingProvider.notifier).markBackedUp();
       ref.invalidate(cloudUsageProvider);
       _snack('Backed up to the cloud.');
     } on CloudBackupCancelled {
@@ -202,6 +204,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
           );
       // The cloud brings its own semesters; the student chooses again.
       await ref.read(selectedSemesterProvider.notifier).select(null);
+      await ref.read(localBackupPendingProvider.notifier).markBackedUp();
       _snack('Restored from the cloud. Choose a semester to see it.');
     } on CloudBackupCancelled {
       _snack('Restore cancelled.');
@@ -277,6 +280,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
       await repo.import(picked.bytes);
       // The backup brings its own semesters; the student chooses again.
       await ref.read(selectedSemesterProvider.notifier).select(null);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       _snack('Backup imported. Choose a semester to see it.');
     } on InvalidBackupException catch (e) {
       _snack(e.message);

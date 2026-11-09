@@ -6,6 +6,7 @@ import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/activities/activity_dialog.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/activities/all_activities_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
@@ -47,6 +48,7 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
       await ref
           .read(activityRepoProvider)
           .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       await ref.read(reminderServiceProvider).syncAll();
     } catch (error) {
       if (!mounted) return;
@@ -115,6 +117,7 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
             deadline: result.deadline,
             status: result.status,
           );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       final reminders = ref.read(reminderServiceProvider);
       if (result.deadline?.isAfter(DateTime.now()) == true) {
         await reminders.requestPermission();

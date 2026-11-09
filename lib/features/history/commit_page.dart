@@ -8,6 +8,7 @@ import 'package:subtrack/core/mime.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_pick.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/ui_components.dart';
 
@@ -121,6 +122,7 @@ class _CommitPageState extends ConsumerState<CommitPage> {
         kind: args == null ? 'upload' : 'edit',
         basedOnCommitId: args?.basedOnCommitId,
       );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       if (args != null) {
         // The working copy is no longer needed once the new version exists.
         await ref.read(editSessionRepoProvider).discard(args.sessionId);

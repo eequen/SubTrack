@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 
@@ -23,51 +24,99 @@ class ScaffoldWithNav extends ConsumerWidget {
     // Once per app start, drop edit sessions whose working copy vanished.
     ref.watch(editSessionCleanupProvider);
     final hasSemester = ref.watch(selectedSemesterProvider) != null;
+    final backupPending = ref.watch(localBackupPendingProvider);
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          if (!hasSemester && (index == 1 || index == 3)) return;
-          _goBranch(index);
-        },
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.cloud_outlined),
-            selectedIcon: Icon(Icons.cloud),
-            label: 'Cloud',
-          ),
-          NavigationDestination(
-            icon: Opacity(
-              opacity: hasSemester ? 1 : 0.4,
-              child: const Icon(Icons.menu_book_outlined),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (backupPending)
+            Material(
+              color: context.palette.deadlineBg,
+              child: InkWell(
+                onTap: () => context.go('/cloud'),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.cloud_off_outlined,
+                          color: context.palette.deadlineText,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Recent changes haven’t been backed up',
+                            style: TextStyle(
+                              color: context.palette.deadlineText,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Back up',
+                          style: TextStyle(
+                            color: context.palette.deadlineText,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-            selectedIcon: Opacity(
-              opacity: hasSemester ? 1 : 0.4,
-              child: const Icon(Icons.menu_book),
-            ),
-            label: 'Subjects',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Opacity(
-              opacity: hasSemester ? 1 : 0.4,
-              child: const Icon(Icons.calendar_month_outlined),
-            ),
-            selectedIcon: Opacity(
-              opacity: hasSemester ? 1 : 0.4,
-              child: const Icon(Icons.calendar_month),
-            ),
-            label: 'Calendar',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+          NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: (index) {
+              if (!hasSemester && (index == 1 || index == 3)) return;
+              _goBranch(index);
+            },
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.cloud_outlined),
+                selectedIcon: Icon(Icons.cloud),
+                label: 'Cloud',
+              ),
+              NavigationDestination(
+                icon: Opacity(
+                  opacity: hasSemester ? 1 : 0.4,
+                  child: const Icon(Icons.menu_book_outlined),
+                ),
+                selectedIcon: Opacity(
+                  opacity: hasSemester ? 1 : 0.4,
+                  child: const Icon(Icons.menu_book),
+                ),
+                label: 'Subjects',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Opacity(
+                  opacity: hasSemester ? 1 : 0.4,
+                  child: const Icon(Icons.calendar_month_outlined),
+                ),
+                selectedIcon: Opacity(
+                  opacity: hasSemester ? 1 : 0.4,
+                  child: const Icon(Icons.calendar_month),
+                ),
+                label: 'Calendar',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
           ),
         ],
       ),

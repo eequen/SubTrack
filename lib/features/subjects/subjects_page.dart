@@ -7,6 +7,7 @@ import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/semesters/semesters_page.dart';
 import 'package:subtrack/features/subjects/subject_dialog.dart';
@@ -31,6 +32,7 @@ class SubjectsPage extends ConsumerWidget {
           color: result.color,
           icon: result.icon,
         );
+    await ref.read(localBackupPendingProvider.notifier).markPending();
   }
 
   @override
@@ -236,19 +238,27 @@ class _SubjectCard extends ConsumerWidget {
           context,
           currentName: subject.name,
         );
-        if (name != null) await repo.rename(subject.id, name);
+        if (name != null) {
+          await repo.rename(subject.id, name);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
+        }
       case _SubjectAction.archive:
         await repo.setArchived(subject.id, true);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
       case _SubjectAction.unarchive:
         await repo.setArchived(subject.id, false);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
       case _SubjectAction.delete:
+        final backupPending = ref.read(localBackupPendingProvider);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete subject?'),
             content: Text(
               'This deletes "${subject.name}", its activities, files, and '
-              'versions. This cannot be undone.',
+              'versions. This cannot be undone.'
+              '${backupPending ? '\n\nRecent changes have not been backed up. '
+                        'Back up now first if you may need to recover them.' : ''}',
             ),
             actions: [
               TextButton(
@@ -262,7 +272,10 @@ class _SubjectCard extends ConsumerWidget {
             ],
           ),
         );
-        if (confirmed == true) await repo.delete(subject.id);
+        if (confirmed == true) {
+          await repo.delete(subject.id);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
+        }
     }
   }
 

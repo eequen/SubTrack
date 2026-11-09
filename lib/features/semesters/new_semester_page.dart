@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/ui_components.dart';
 
@@ -79,6 +80,7 @@ class _NewSemesterPageState extends ConsumerState<NewSemesterPage> {
             startDate: _start,
             endDate: _end,
           );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       await ref.read(selectedSemesterProvider.notifier).select(id);
       if (mounted) context.go('/home');
     } on ArgumentError catch (error) {

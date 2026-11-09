@@ -9,6 +9,7 @@ import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
@@ -49,6 +50,8 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
             bytes: picked.bytes,
             displayName: picked.name,
           );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      _snack('File added. Back up your recent changes when ready.');
     } catch (e) {
       _snack('Could not add file: $e');
     }
@@ -66,6 +69,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
       await ref
           .read(activityRepoProvider)
           .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       await ref.read(reminderServiceProvider).syncAll();
     } catch (error) {
       _snack('Could not update status: $error');

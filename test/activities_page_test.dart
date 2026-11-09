@@ -76,6 +76,7 @@ void main() {
     await _createActivity(tester, title: 'Lab report', statusLabel: 'Final');
     expect(find.text('Lab report'), findsOneWidget);
     expect(find.text('1 activity'), findsOneWidget);
+    expect(find.text('Recent changes haven’t been backed up'), findsOneWidget);
     expect(find.text('No files yet.'), findsOneWidget);
 
     await _createActivity(tester, title: 'Quiz');
@@ -113,6 +114,28 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    await db.close();
+    await tester.pump();
+  });
+
+  testWidgets('delete warns when recent activity changes are unbacked', (
+    tester,
+  ) async {
+    final db = await _pumpActivities(tester);
+    await _createActivity(tester, title: 'Lab report');
+
+    await tester.tap(find.byTooltip('Activity actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Recent changes have not been backed up.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
 
     await db.close();
     await tester.pump();

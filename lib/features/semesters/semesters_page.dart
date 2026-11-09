@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/ui_components.dart';
@@ -83,13 +84,16 @@ class _SemesterChooserSheetState extends ConsumerState<SemesterChooserSheet> {
   }
 
   Future<void> _delete(SemesterListItem item) async {
+    final backupPending = ref.read(localBackupPendingProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete semester?'),
-        content: const Text(
+        content: Text(
           'This deletes its subjects, activities, files, and versions. '
-          'This cannot be undone.',
+          'This cannot be undone.'
+          '${backupPending ? '\n\nRecent changes have not been backed up. '
+                    'Back up now first if you may need to recover them.' : ''}',
         ),
         actions: [
           TextButton(
@@ -108,6 +112,7 @@ class _SemesterChooserSheetState extends ConsumerState<SemesterChooserSheet> {
     try {
       final selected = ref.read(selectedSemesterProvider);
       await ref.read(semesterRepoProvider).delete(item.semester.id);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       if (selected == item.semester.id) {
         await ref.read(selectedSemesterProvider.notifier).select(null);
       }

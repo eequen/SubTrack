@@ -9,6 +9,7 @@ import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/activities/activity_dialog.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
@@ -76,6 +77,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
       await ref
           .read(activityRepoProvider)
           .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       await _syncReminders();
     } catch (error) {
       _snack('Could not update status: $error');
@@ -95,6 +97,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
             deadline: result.deadline,
             status: result.status,
           );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       await _syncReminders(askPermission: _isFuture(result.deadline));
     } catch (error) {
       _snack('Could not create activity: $error');
@@ -105,39 +108,47 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
     final repo = ref.read(activityRepoProvider);
     final action = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       builder: (context) => SheetScaffold(
         title: 'Activity actions',
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () => Navigator.of(context).pop('edit'),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit'),
+                  onTap: () => Navigator.of(context).pop('edit'),
+                ),
+                ListTile(
+                  leading: Icon(
+                    activity.isArchived
+                        ? Icons.unarchive_outlined
+                        : Icons.archive_outlined,
+                  ),
+                  title: Text(activity.isArchived ? 'Unarchive' : 'Archive'),
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pop(activity.isArchived ? 'unarchive' : 'archive'),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: context.palette.overdue,
+                  ),
+                  title: Text(
+                    'Delete',
+                    style: TextStyle(color: context.palette.overdue),
+                  ),
+                  onTap: () => Navigator.of(context).pop('delete'),
+                ),
+              ],
             ),
-            ListTile(
-              leading: Icon(
-                activity.isArchived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
-              ),
-              title: Text(activity.isArchived ? 'Unarchive' : 'Archive'),
-              onTap: () =>
-                  Navigator.of(context)
-                      .pop(activity.isArchived ? 'unarchive' : 'archive'),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: context.palette.overdue,
-              ),
-              title: Text(
-                'Delete',
-                style: TextStyle(color: context.palette.overdue),
-              ),
-              onTap: () => Navigator.of(context).pop('delete'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -160,22 +171,28 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
             status: result.status,
           );
           await repo.setDeadline(activity.id, result.deadline);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
           await _syncReminders(askPermission: _isFuture(result.deadline));
         }
       case 'archive':
         await repo.setArchived(activity.id, true);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
         await _syncReminders();
       case 'unarchive':
         await repo.setArchived(activity.id, false);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
         await _syncReminders();
       case 'delete':
+        final backupPending = ref.read(localBackupPendingProvider);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete activity?'),
             content: Text(
               'This deletes "${activity.title}", its files, and versions. '
-              'This cannot be undone.',
+              'This cannot be undone.'
+              '${backupPending ? '\n\nRecent changes have not been backed up. '
+                        'Back up now first if you may need to recover them.' : ''}',
             ),
             actions: [
               TextButton(
@@ -191,6 +208,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
         );
         if (confirmed == true) {
           await repo.delete(activity.id);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
           await _syncReminders();
         }
     }
