@@ -7,6 +7,7 @@ import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/features/dashboard/calendar_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 final _monthFormat = DateFormat('MMMM yyyy');
 final _dayFormat = DateFormat('EEEE, MMMM d');
@@ -169,13 +170,8 @@ class _MonthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-      decoration: BoxDecoration(
-        color: context.palette.card,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(color: context.palette.cardBorder),
-      ),
       child: Column(
         children: [
           Row(
@@ -282,7 +278,7 @@ class _MonthCard extends StatelessWidget {
                   '${day.day}',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isSelected ? Colors.white : palette.text,
+                    color: isSelected ? palette.onAccent : palette.text,
                     fontWeight: isToday || isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
@@ -297,7 +293,9 @@ class _MonthCard extends StatelessWidget {
                           height: 4,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isSelected ? Colors.white : palette.accent,
+                            color: isSelected
+                                ? palette.onAccent
+                                : palette.deadlineText,
                           ),
                         )
                       : null,
@@ -367,46 +365,36 @@ class _DayActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activity = item.activity;
-    return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.push('/activities/${activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      activity.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: context.palette.text,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    StatusChip(status: activity.status),
-                  ],
+    return AppCard(
+      onTap: () => context.push('/activities/${activity.id}'),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activity.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Icon(Icons.chevron_right, color: context.palette.mutedText),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  item.subjectName,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                StatusChip(status: activity.status),
+              ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right, color: context.palette.mutedText),
+        ],
       ),
     );
   }
