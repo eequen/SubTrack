@@ -439,7 +439,7 @@ class _AccentDot extends StatelessWidget {
             ),
           ),
           child: selected
-              ? const Icon(Icons.check, color: Colors.white, size: 20)
+              ? Icon(Icons.check, color: context.palette.onAccent, size: 20)
               : null,
         ),
       ),

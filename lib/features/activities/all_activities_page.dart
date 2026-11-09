@@ -130,19 +130,25 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                 child: !canBuildList
                     ? const _NoSemesterState()
                     : itemsAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (e, _) =>
-                            Center(child: Text('Could not load: $e')),
+                        loading: () => const AppLoadingState(
+                          message: 'Loading activities...',
+                        ),
+                        error: (e, _) => AppErrorState(
+                          message: 'Could not load activities: $e',
+                        ),
                         data: (_) {
                           if (items.isEmpty) {
-                            return const Center(
-                              child: Text('No activities yet.'),
+                            return const EmptyState(
+                              icon: Icons.assignment_outlined,
+                              title: 'No activities yet.',
+                              message: 'Tap + to add your first activity.',
                             );
                           }
                           if (filtered.isEmpty) {
-                            return const Center(
-                              child: Text('No activities match this filter.'),
+                            return const EmptyState(
+                              icon: Icons.filter_list,
+                              title: 'No activities match this filter.',
+                              message: 'Choose another filter to see more activities.',
                             );
                           }
                           return ListView.separated(

@@ -156,13 +156,9 @@ class _SubjectGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subjects = ref.watch(subjectsProvider(semesterId));
     return subjects.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(
-        child: Text(
-          'Could not load subjects: $error',
-          style: TextStyle(color: context.palette.overdue),
-        ),
-      ),
+      loading: () => const AppLoadingState(message: 'Loading subjects...'),
+      error: (error, _) =>
+          AppErrorState(message: 'Could not load subjects: $error'),
       data: (items) => GridView.builder(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

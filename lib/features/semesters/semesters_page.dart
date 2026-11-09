@@ -159,15 +159,15 @@ class _SemesterChooserSheetState extends ConsumerState<SemesterChooserSheet> {
       ),
       child: semesters.when(
         loading: () => const Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: Center(child: CircularProgressIndicator()),
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: SizedBox(
+            height: 100,
+            child: AppLoadingState(message: 'Loading semesters...'),
+          ),
         ),
         error: (error, _) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Text(
-            'Could not load semesters: $error',
-            style: TextStyle(color: context.palette.overdue),
-          ),
+          child: AppErrorState(message: 'Could not load semesters: $error'),
         ),
         data: (items) => Column(
           mainAxisSize: MainAxisSize.min,
@@ -175,11 +175,12 @@ class _SemesterChooserSheetState extends ConsumerState<SemesterChooserSheet> {
           children: [
             if (items.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 28),
-                child: Text(
-                  'No semesters yet. Add one to get started.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.palette.mutedText),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: const EmptyState(
+                  icon: Icons.school_outlined,
+                  title: 'No semesters yet',
+                  message: 'Add a semester to start organizing your subjects.',
+                  showBrandLogo: true,
                 ),
               )
             else

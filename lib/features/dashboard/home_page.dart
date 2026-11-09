@@ -53,8 +53,24 @@ class HomePage extends ConsumerWidget {
     final profile = ref.watch(profileProvider).value;
 
     final selectedId = ref.watch(selectedSemesterProvider);
-    final semesters =
-        ref.watch(semestersProvider).value ?? const <SemesterListItem>[];
+    final semestersAsync = ref.watch(semestersProvider);
+    if (semestersAsync.isLoading && !semestersAsync.hasValue) {
+      return const Scaffold(
+        body: SafeArea(
+          child: AppLoadingState(message: 'Loading your semesters...'),
+        ),
+      );
+    }
+    if (semestersAsync.hasError && !semestersAsync.hasValue) {
+      return Scaffold(
+        body: SafeArea(
+          child: AppErrorState(
+            message: 'Could not load semesters: ${semestersAsync.error}',
+          ),
+        ),
+      );
+    }
+    final semesters = semestersAsync.value ?? const <SemesterListItem>[];
     SemesterListItem? current;
     for (final s in semesters) {
       if (s.semester.id == selectedId) {
@@ -251,7 +267,19 @@ class _DueSoonSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (due.isEmpty)
+        if (dueAsync.isLoading && !dueAsync.hasValue)
+          const SizedBox(
+            height: 96,
+            child: AppLoadingState(message: 'Loading deadlines...'),
+          )
+        else if (dueAsync.hasError && !dueAsync.hasValue)
+          SizedBox(
+            height: 112,
+            child: AppErrorState(
+              message: 'Could not load deadlines: ${dueAsync.error}',
+            ),
+          )
+        else if (due.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -289,51 +317,41 @@ class _DueCard extends StatelessWidget {
         ? context.palette.overdue
         : context.palette.deadlineText;
 
-    return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.push('/activities/${item.activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.activity.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: context.palette.text,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+    return AppCard(
+      onTap: () => context.push('/activities/${item.activity.id}'),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.activity.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                dueLabel(item.activity.deadline ?? DateTime.now()),
-                style: TextStyle(
-                  color: dueColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                const SizedBox(height: 4),
+                Text(
+                  item.subjectName,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          Text(
+            dueLabel(item.activity.deadline ?? DateTime.now()),
+            style: TextStyle(
+              color: dueColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -353,62 +371,61 @@ class _ThisSemesterSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final counts =
-        ref.watch(statusCountsProvider).value ?? const <String, int>{};
+    final countsAsync = ref.watch(statusCountsProvider);
+    final counts = countsAsync.value ?? const <String, int>{};
     final total = counts.values.fold(0, (sum, n) => sum + n);
     final legend = _statusLegend(context.palette);
 
-    return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.go('/activities'),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: () => context.go('/activities'),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'This semester',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    total == 1 ? '1 activity' : '$total activities',
-                    style: TextStyle(
-                      color: context.palette.mutedText,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+              const Expanded(
+                child: Text(
+                  'This semester',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
-              const SizedBox(height: 12),
-              _SegmentedBar(counts: counts),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  for (final (status, label, color) in legend) ...[
-                    if (status != 'draft') const SizedBox(width: 6),
-                    Expanded(
-                      child: _LegendEntry(
-                        label: label,
-                        color: color,
-                        count: counts[status] ?? 0,
-                      ),
-                    ),
-                  ],
-                ],
+              Text(
+                total == 1 ? '1 activity' : '$total activities',
+                style: TextStyle(
+                  color: context.palette.mutedText,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          if (countsAsync.isLoading && !countsAsync.hasValue)
+            const LinearProgressIndicator()
+          else if (countsAsync.hasError && !countsAsync.hasValue)
+            Text(
+              'Could not load activity progress: ${countsAsync.error}',
+              style: TextStyle(color: context.palette.overdue),
+            )
+          else
+            _SegmentedBar(counts: counts),
+          const SizedBox(height: 12),
+          if (!countsAsync.hasError)
+            Row(
+              children: [
+                for (final (status, label, color) in legend) ...[
+                  if (status != 'draft') const SizedBox(width: 6),
+                  Expanded(
+                    child: _LegendEntry(
+                      label: label,
+                      color: color,
+                      count: counts[status] ?? 0,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+        ],
       ),
     );
   }

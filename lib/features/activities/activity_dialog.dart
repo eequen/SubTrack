@@ -215,7 +215,7 @@ class _ActivityDialogState extends State<_ActivityDialog> {
               maxLines: 3,
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
           ],
         ),
       ),

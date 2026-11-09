@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/shared/brand_logo.dart';
 
 class AppCard extends StatelessWidget {
   const AppCard({
@@ -73,6 +74,113 @@ class DashedCard extends StatelessWidget {
         child: CustomPaint(
           painter: _DashedBorderPainter(color: borderColor, radius: radius),
           child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.showBrandLogo = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final bool showBrandLogo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showBrandLogo)
+              const BrandLogo.full(height: 52)
+            else
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: context.palette.accent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: context.palette.accentText),
+              ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: context.palette.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.palette.mutedText),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppLoadingState extends StatelessWidget {
+  const AppLoadingState({this.message = 'Loading...', super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          const SizedBox(height: 12),
+          Text(message, style: TextStyle(color: context.palette.mutedText)),
+        ],
+      ),
+    );
+  }
+}
+
+class AppErrorState extends StatelessWidget {
+  const AppErrorState({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: context.palette.overdue, size: 32),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.palette.overdue),
+            ),
+          ],
         ),
       ),
     );

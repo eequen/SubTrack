@@ -183,8 +183,9 @@ void main() {
     );
 
     expect(find.text('Choose semester'), findsOneWidget);
+    expect(find.text('No semesters yet'), findsOneWidget);
     expect(
-      find.text('No semesters yet. Add one to get started.'),
+      find.text('Add a semester to start organizing your subjects.'),
       findsOneWidget,
     );
     expect(find.text('New semester'), findsOneWidget);

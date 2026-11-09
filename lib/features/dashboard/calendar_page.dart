@@ -67,9 +67,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     final semesterId = ref.watch(selectedSemesterProvider);
-    final activities =
-        ref.watch(calendarActivitiesProvider).value ??
-        const <UpcomingActivity>[];
+    final activitiesAsync = ref.watch(calendarActivitiesProvider);
+    final activities = activitiesAsync.value ?? const <UpcomingActivity>[];
 
     final byDay = <String, List<UpcomingActivity>>{};
     for (final item in activities) {
@@ -125,6 +124,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               const SizedBox(height: 12),
               if (semesterId == null)
                 const Expanded(child: _NoSemesterState())
+              else if (activitiesAsync.isLoading && !activitiesAsync.hasValue)
+                const Expanded(
+                  child: AppLoadingState(message: 'Loading deadlines...'),
+                )
+              else if (activitiesAsync.hasError && !activitiesAsync.hasValue)
+                Expanded(
+                  child: AppErrorState(
+                    message:
+                        'Could not load deadlines: ${activitiesAsync.error}',
+                  ),
+                )
               else ...[
                 _MonthCard(
                   month: _month,
@@ -339,9 +349,12 @@ class _DayList extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (items.isEmpty)
-          Text(
-            'No deadlines on this day.',
-            style: TextStyle(color: context.palette.mutedText),
+          const Expanded(
+            child: EmptyState(
+              icon: Icons.event_available_outlined,
+              title: 'No deadlines on this day.',
+              message: 'Choose another date to view its activities.',
+            ),
           )
         else
           Expanded(

@@ -109,20 +109,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     AsyncValue<SearchResults> results,
   ) {
     if (semesterId == null) {
-      return const Center(child: Text('Choose a semester first.'));
+      return const EmptyState(
+        icon: Icons.school_outlined,
+        title: 'Choose a semester first.',
+        message: 'Select a semester before searching your work.',
+      );
     }
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
-      return const Center(child: Text(_emptyHint, textAlign: TextAlign.center));
+      return const EmptyState(
+        icon: Icons.search,
+        title: 'Search your semester',
+        message: _emptyHint,
+      );
     }
     // While a new query runs, `value` keeps the previous results so the
     // list does not blink on every keystroke.
     final value = results.value;
     if (value == null) {
       if (results.hasError) {
-        return Center(child: Text('Could not search: ${results.error}'));
+        return AppErrorState(message: 'Could not search: ${results.error}');
       }
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingState(message: 'Searching...');
     }
 
     final showAll = _filter == null;
@@ -143,7 +151,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         'commits' => 'No commits match "$trimmed".',
         _ => 'No results for "$trimmed".',
       };
-      return Center(child: Text(text));
+      return EmptyState(
+        icon: Icons.search_off,
+        title: text,
+        message: 'Try a different search term or category.',
+      );
     }
 
     return ListView(

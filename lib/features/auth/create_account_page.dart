@@ -113,7 +113,7 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                   Text(
                     'Create account',
                     style: textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
+                      color: context.palette.onAccent,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -121,7 +121,9 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
                   Text(
                     'Choose the username you will log in with.',
                     textAlign: TextAlign.center,
-                    style: textTheme.bodyMedium?.copyWith(color: Colors.white),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: context.palette.onAccent,
+                    ),
                   ),
                 ],
               ),

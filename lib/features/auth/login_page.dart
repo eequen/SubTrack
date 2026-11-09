@@ -74,7 +74,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Text(
                     'SubTrack',
                     style: textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
+                      color: context.palette.onAccent,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -83,7 +83,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     'Every subject, every version, safely kept.',
                     textAlign: TextAlign.center,
                     style: textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
+                      color: context.palette.onAccent,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

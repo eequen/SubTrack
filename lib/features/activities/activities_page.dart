@@ -107,8 +107,14 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       .pop(activity.isArchived ? 'unarchive' : 'archive'),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              leading: Icon(
+                Icons.delete_outline,
+                color: context.palette.overdue,
+              ),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: context.palette.overdue),
+              ),
               onTap: () => Navigator.of(context).pop('delete'),
             ),
           ],
@@ -227,15 +233,23 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
               Expanded(
                 child: activities.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading activities...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load activities: $e'),
                   data: (_) {
                     if (items.isEmpty) {
-                      return const Center(child: Text('No activities yet.'));
+                      return const EmptyState(
+                        icon: Icons.assignment_outlined,
+                        title: 'No activities yet.',
+                        message: 'Tap + to add your first activity.',
+                      );
                     }
                     if (filtered.isEmpty) {
-                      return const Center(
-                        child: Text('No activities match this filter.'),
+                      return const EmptyState(
+                        icon: Icons.filter_list,
+                        title: 'No activities match this filter.',
+                        message:
+                            'Choose another status to see more activities.',
                       );
                     }
                     return ListView.separated(

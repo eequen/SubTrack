@@ -108,9 +108,9 @@ class _NewSubjectDialogState extends State<_NewSubjectDialog> {
                           ),
                         ),
                         child: i == _colorIndex
-                            ? const Icon(
+                            ? Icon(
                                 Icons.check,
-                                color: Colors.white,
+                                color: context.palette.onAccent,
                                 size: 18,
                               )
                             : null,
@@ -129,7 +129,7 @@ class _NewSubjectDialogState extends State<_NewSubjectDialog> {
               maxLength: 4,
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
           ],
         ),
       ),
@@ -193,7 +193,7 @@ class _RenameSubjectDialogState extends State<_RenameSubjectDialog> {
             onSubmitted: (_) => _save(),
           ),
           if (_error != null)
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+            Text(_error!, style: TextStyle(color: context.palette.overdue)),
         ],
       ),
       actions: [

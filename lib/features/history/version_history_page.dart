@@ -136,11 +136,16 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
               Expanded(
                 child: commits.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading versions...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load versions: $e'),
                   data: (list) {
                     if (list.isEmpty) {
-                      return const Center(child: Text('No versions yet.'));
+                      return const EmptyState(
+                        icon: Icons.history,
+                        title: 'No versions yet.',
+                        message: 'Commit a file to start its version history.',
+                      );
                     }
                     return ListView.separated(
                       itemCount: list.length,

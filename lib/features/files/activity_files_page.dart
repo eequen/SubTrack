@@ -143,11 +143,17 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
               Expanded(
                 child: files.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading files...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load files: $e'),
                   data: (items) {
                     if (items.isEmpty) {
-                      return const Center(child: Text('No files yet.'));
+                      return const EmptyState(
+                        icon: Icons.folder_open_outlined,
+                        title: 'No files yet.',
+                        message: 'Add a file to keep your work in one place.',
+                        showBrandLogo: true,
+                      );
                     }
                     return ListView.separated(
                       itemCount: items.length,
