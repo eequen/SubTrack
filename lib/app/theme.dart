@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Accent choices: indigo (default), teal, orange, purple from AGENTS.md
-/// section 14, plus pink. [light] and [darkFill] are button/avatar fills
+/// Accent choices: indigo (default), teal, orange, and purple. [light] and
+/// [darkFill] are button/avatar fills
 /// (always with white text); [darkText] is the lighter tint used for links
 /// and the active tab in dark mode.
 class AccentOption {
@@ -21,9 +21,9 @@ class AccentOption {
 const accentOptions = <AccentOption>[
   AccentOption(
     key: 'indigo',
-    light: Color(0xFF3B4BDB),
-    darkFill: Color(0xFF3B4BDB),
-    darkText: Color(0xFF8E99FF),
+    light: Color(0xFF2077BD),
+    darkFill: Color(0xFF2077BD),
+    darkText: Color(0xFF70B7F0),
   ),
   AccentOption(
     key: 'teal',
@@ -43,12 +43,6 @@ const accentOptions = <AccentOption>[
     darkFill: Color(0xFF7A3FB5),
     darkText: Color(0xFFC89AF0),
   ),
-  AccentOption(
-    key: 'pink',
-    light: Color(0xFFC2185B),
-    darkFill: Color(0xFFC2185B),
-    darkText: Color(0xFFFF8FB1),
-  ),
 ];
 
 /// Looks an accent up by its stored key; unknown keys fall back to indigo.
@@ -58,6 +52,10 @@ AccentOption accentByKey(String? key) => accentOptions.firstWhere(
 );
 
 abstract final class AppColors {
+  static const navy = Color(0xFF12307F);
+  static const brandBlue = Color(0xFF2077BD);
+  static const sky = Color(0xFF55ABEE);
+
   /// Fixed badge colors picked when creating a subject. Each subject stores
   /// its own color, so these do not follow the theme accent.
   static const subjectBadges = <Color>[
@@ -84,6 +82,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.deadlineText,
     required this.deadlineBg,
     required this.overdue,
+    required this.overdueBg,
     required this.draftText,
     required this.draftBg,
     required this.inProgressText,
@@ -110,6 +109,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color deadlineText;
   final Color deadlineBg;
   final Color overdue;
+  final Color overdueBg;
 
   final Color draftText;
   final Color draftBg;
@@ -123,51 +123,53 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static AppPalette light(String accentKey) {
     final accent = accentByKey(accentKey);
     return AppPalette(
-      background: const Color(0xFFF4F6FB),
+      background: const Color(0xFFF3F7FD),
+      // The design background is slightly blue to keep white cards distinct.
       card: const Color(0xFFFFFFFF),
-      cardBorder: const Color(0xFFE1E5F0),
-      text: const Color(0xFF14182B),
-      mutedText: const Color(0xFF5B6280),
+      cardBorder: const Color(0xFFE1E8F3),
+      text: const Color(0xFF0E1B3D),
+      mutedText: const Color(0xFF566686),
       accent: accent.light,
       accentText: accent.light,
       onAccent: const Color(0xFFFFFFFF),
       deadlineText: const Color(0xFF9A5B00),
-      deadlineBg: const Color(0xFFFFF1D6),
+      deadlineBg: const Color(0xFFFFF0DC),
       overdue: const Color(0xFFB42318),
-      draftText: const Color(0xFF444B66),
-      draftBg: const Color(0xFFECEEF5),
-      inProgressText: const Color(0xFF2D3AB5),
-      inProgressBg: const Color(0xFFE8EAFD),
-      finalText: const Color(0xFF0B6B5F),
-      finalBg: const Color(0xFFDDF5F0),
-      submittedText: const Color(0xFF2F6B16),
-      submittedBg: const Color(0xFFE4F4DC),
+      overdueBg: const Color(0xFFFDE8E6),
+      draftText: const Color(0xFF475569),
+      draftBg: const Color(0xFFE8EDF5),
+      inProgressText: const Color(0xFF9A4B00),
+      inProgressBg: const Color(0xFFFFF0DC),
+      finalText: const Color(0xFF1B4FB8),
+      finalBg: const Color(0xFFE3EDFF),
+      submittedText: const Color(0xFF0B6B4F),
+      submittedBg: const Color(0xFFDDF5EA),
     );
   }
 
   static AppPalette dark(String accentKey) {
     final accent = accentByKey(accentKey);
     return AppPalette(
-      background: const Color(0xFF0F1220),
-      card: const Color(0xFF1A1F33),
-      cardBorder: const Color(0xFF2A3050),
-      text: const Color(0xFFEDEFF8),
-      mutedText: const Color(0xFFA3AACB),
+      background: const Color(0xFF0B1226),
+      card: const Color(0xFF141C36),
+      cardBorder: const Color(0xFF27325A),
+      text: const Color(0xFFEDF1FB),
+      mutedText: const Color(0xFFA3AFCC),
       accent: accent.darkFill,
       accentText: accent.darkText,
       onAccent: const Color(0xFFFFFFFF),
-      deadlineText: const Color(0xFFF2C879),
-      // The light amber at 20% over the dark background.
-      deadlineBg: const Color(0x33FFF1D6),
-      overdue: const Color(0xFFFF8A7A),
-      draftText: const Color(0xFFC3C9DD),
-      draftBg: const Color(0x33444B66),
-      inProgressText: const Color(0xFF9FA8FF),
-      inProgressBg: const Color(0x332D3AB5),
-      finalText: const Color(0xFF57C9B7),
-      finalBg: const Color(0x330B6B5F),
-      submittedText: const Color(0xFF8ED46C),
-      submittedBg: const Color(0x332F6B16),
+      deadlineText: const Color(0xFFFFC56A),
+      deadlineBg: const Color(0x33FFB547),
+      overdue: const Color(0xFFFF8E86),
+      overdueBg: const Color(0x33B42318),
+      draftText: const Color(0xFFC4CEE3),
+      draftBg: const Color(0x33475569),
+      inProgressText: const Color(0xFFFFB66E),
+      inProgressBg: const Color(0x339A4B00),
+      finalText: const Color(0xFF91B7FF),
+      finalBg: const Color(0x331B4FB8),
+      submittedText: const Color(0xFF75D7B5),
+      submittedBg: const Color(0x330B6B4F),
     );
   }
 
@@ -184,6 +186,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? deadlineText,
     Color? deadlineBg,
     Color? overdue,
+    Color? overdueBg,
     Color? draftText,
     Color? draftBg,
     Color? inProgressText,
@@ -205,6 +208,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       deadlineText: deadlineText ?? this.deadlineText,
       deadlineBg: deadlineBg ?? this.deadlineBg,
       overdue: overdue ?? this.overdue,
+      overdueBg: overdueBg ?? this.overdueBg,
       draftText: draftText ?? this.draftText,
       draftBg: draftBg ?? this.draftBg,
       inProgressText: inProgressText ?? this.inProgressText,
@@ -232,6 +236,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       deadlineText: mix(deadlineText, other.deadlineText),
       deadlineBg: mix(deadlineBg, other.deadlineBg),
       overdue: mix(overdue, other.overdue),
+      overdueBg: mix(overdueBg, other.overdueBg),
       draftText: mix(draftText, other.draftText),
       draftBg: mix(draftBg, other.draftBg),
       inProgressText: mix(inProgressText, other.inProgressText),
@@ -251,8 +256,9 @@ extension PaletteContext on BuildContext {
 
 abstract final class AppTheme {
   static const double screenPadding = 20;
-  static const double cardRadius = 14;
-  static const double buttonRadius = 12;
+  static const double cardRadius = 20;
+  static const double buttonRadius = 16;
+  static const String fontFamily = 'Plus Jakarta Sans';
 
   static ThemeData light(String accentKey) =>
       _build(AppPalette.light(accentKey), Brightness.light);
@@ -262,15 +268,26 @@ abstract final class AppTheme {
 
   static ThemeData _build(AppPalette palette, Brightness brightness) {
     final base = ThemeData(brightness: brightness, useMaterial3: true);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: palette.accentText,
-      brightness: brightness,
-      primary: palette.accentText,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: palette.accent,
+          brightness: brightness,
+        ).copyWith(
+          primary: palette.accent,
+          onPrimary: palette.onAccent,
+          secondary: palette.accentText,
+          onSecondary: palette.onAccent,
+          surface: palette.card,
+          onSurface: palette.text,
+          error: palette.overdue,
+          onError: palette.onAccent,
+          outline: palette.cardBorder,
+        );
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: palette.background,
       textTheme: base.textTheme.apply(
+        fontFamily: fontFamily,
         bodyColor: palette.text,
         displayColor: palette.text,
       ),
@@ -279,12 +296,41 @@ abstract final class AppTheme {
         foregroundColor: palette.text,
         elevation: 0,
       ),
-      dialogTheme: DialogThemeData(backgroundColor: palette.card),
+      cardTheme: CardThemeData(
+        color: palette.card,
+        surfaceTintColor: Colors.transparent,
+        elevation: 3,
+        shadowColor: AppColors.navy.withValues(alpha: 0.08),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: BorderSide(color: palette.cardBorder),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: palette.accent,
           foregroundColor: palette.onAccent,
-          minimumSize: const Size(64, 48),
+          minimumSize: const Size(64, 52),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonRadius),
           ),
@@ -294,6 +340,12 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: palette.accentText,
           minimumSize: const Size(64, 44),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
+          side: BorderSide(color: palette.cardBorder),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonRadius),
           ),
@@ -305,6 +357,12 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: palette.card,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
+        hintStyle: TextStyle(color: palette.mutedText),
+        labelStyle: TextStyle(color: palette.mutedText),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(buttonRadius),
           borderSide: BorderSide(color: palette.cardBorder),
@@ -313,19 +371,30 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(buttonRadius),
           borderSide: BorderSide(color: palette.cardBorder),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: BorderSide(color: palette.accentText, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: BorderSide(color: palette.overdue),
+        ),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: palette.accentText,
+        linearTrackColor: palette.cardBorder,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.card,
-        indicatorColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 72,
+        indicatorColor: palette.accent.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
+            fontFamily: fontFamily,
             fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w600
-                : FontWeight.normal,
+            fontWeight: FontWeight.w600,
             color: states.contains(WidgetState.selected)
                 ? palette.accentText
                 : palette.mutedText,
