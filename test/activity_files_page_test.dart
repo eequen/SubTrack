@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
@@ -16,6 +17,7 @@ import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 class _Setup {
   const _Setup({
@@ -117,7 +119,7 @@ void main() {
 
     // Header: title, status chip, deadline, notes (screen 6, AGENTS.md 14).
     expect(find.text('Lab report'), findsOneWidget);
-    expect(find.byType(StatusChip), findsOneWidget);
+    expect(find.byType(SegmentedSelector), findsOneWidget);
     expect(find.text('Final'), findsOneWidget);
     expect(find.byType(DeadlineChip), findsOneWidget);
     expect(find.text('Bring the handout'), findsOneWidget);
@@ -143,6 +145,23 @@ void main() {
     expect(find.text('No files yet.'), findsOneWidget);
     expect(find.text('lab1.txt'), findsNothing);
     expect(find.widgetWithText(ElevatedButton, '+ Add file'), findsOneWidget);
+
+    await setup.db.close();
+    await tester.pump();
+  });
+
+  testWidgets('activity status selector updates the stored status', (
+    tester,
+  ) async {
+    final setup = await _setup(tester, withFile: false);
+
+    await tester.tap(find.text('Submitted'));
+    await tester.pumpAndSettle();
+
+    final activity = await tester.runAsync(
+      () => ActivityRepo(setup.db).watchById(setup.activityId).first,
+    );
+    expect(activity?.status, 'submitted');
 
     await setup.db.close();
     await tester.pump();

@@ -9,6 +9,7 @@ import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 final _dateFormat = DateFormat('MMM d, y · h:mm a');
 
@@ -222,47 +223,42 @@ class _CommitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    'v${commit.versionNo} - ${commit.message}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+    return AppCard(
+      borderColor: isCurrent ? context.palette.accentText : null,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  'v${commit.versionNo} - ${commit.message}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
-                if (isCurrent) ...[
-                  const SizedBox(width: 8),
-                  const CurrentChip(),
-                ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${_dateFormat.format(commit.createdAt)}'
-              ' · ${formatBytes(commit.sizeBytes)}',
-              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                CardButton(label: 'Open', onPressed: onOpen),
-                const SizedBox(width: 8),
-                CardButton(label: 'Edit', onPressed: onEdit),
-                if (!isCurrent) ...[
-                  const SizedBox(width: 8),
-                  CardButton(label: 'Restore', onPressed: onRestore),
-                ],
-              ],
-            ),
-          ],
-        ),
+              ),
+              if (isCurrent) ...[const SizedBox(width: 8), const CurrentChip()],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${_dateFormat.format(commit.createdAt)}'
+            ' · ${formatBytes(commit.sizeBytes)}',
+            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              CardButton(label: 'Open', onPressed: onOpen),
+              CardButton(label: 'Edit', onPressed: onEdit),
+              if (!isCurrent)
+                CardButton(label: 'Restore', onPressed: onRestore),
+            ],
+          ),
+        ],
       ),
     );
   }

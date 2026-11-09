@@ -6,12 +6,16 @@ import 'package:open_filex/open_filex.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/features/profile/profile_providers.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 6 from AGENTS.md section 14: files of one activity.
 class ActivityFilesPage extends ConsumerStatefulWidget {
@@ -56,6 +60,18 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _setStatus(Activity activity, String status) async {
+    if (activity.status == status) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await ref.read(reminderServiceProvider).syncAll();
+    } catch (error) {
+      _snack('Could not update status: $error');
+    }
+  }
+
   Future<void> _open(FileListItem item) async {
     final commit = item.currentCommit;
     if (commit == null) return;
@@ -79,6 +95,8 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
     final editing =
         ref.watch(activeEditSessionsProvider(_activityId)).value ??
         const <int>{};
+    final remindersEnabled =
+        ref.watch(profileProvider).value?.remindDeadlines ?? true;
 
     return Scaffold(
       body: SafeArea(
@@ -98,14 +116,30 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                     child: activity.when(
                       loading: () => const SizedBox.shrink(),
                       error: (_, _) => const Text('Activity not found'),
-                      data: (a) => a == null
-                          ? const Text('Activity not found')
-                          : _ActivityHeader(activity: a),
+                      data: (a) => Text(
+                        a?.title ?? 'Activity not found',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              activity.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (a) => a == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ActivityDetails(
+                          activity: a,
+                          remindersEnabled: remindersEnabled,
+                          onStatusChanged: (status) => _setStatus(a, status),
+                        ),
+                      ),
+              ),
               Expanded(
                 child: files.when(
                   loading: () =>
@@ -128,9 +162,9 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
+              PrimaryButton(
+                label: '+ Add file',
                 onPressed: _activityId <= 0 ? null : _addFile,
-                child: const Text('+ Add file'),
               ),
             ],
           ),
@@ -140,35 +174,66 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
   }
 }
 
-class _ActivityHeader extends StatelessWidget {
-  const _ActivityHeader({required this.activity});
+class _ActivityDetails extends StatelessWidget {
+  const _ActivityDetails({
+    required this.activity,
+    required this.remindersEnabled,
+    required this.onStatusChanged,
+  });
 
   final Activity activity;
+  final bool remindersEnabled;
+  final ValueChanged<String> onStatusChanged;
 
   @override
   Widget build(BuildContext context) {
     final notes = activity.notes.trim();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          activity.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            StatusChip(status: activity.status),
-            if (activity.deadline != null) ...[
-              const SizedBox(width: 8),
-              DeadlineChip(deadline: activity.deadline!),
-            ],
+        SegmentedSelector(
+          options: [
+            for (final status in ActivityRepo.statuses)
+              SegmentOption(value: status, label: statusLabel(status)),
           ],
+          value: activity.status,
+          onChanged: onStatusChanged,
         ),
+        if (activity.deadline != null) ...[
+          const SizedBox(height: 8),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.event_outlined, color: context.palette.deadlineText),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Due ${DateFormat('EEE, MMM d').format(activity.deadline!)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        remindersEnabled
+                            ? 'Reminder: 1 day before'
+                            : 'Deadline reminders are off in Profile',
+                        style: TextStyle(
+                          color: context.palette.mutedText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                DeadlineChip(deadline: activity.deadline!),
+              ],
+            ),
+          ),
+        ],
         if (notes.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             notes,
             style: TextStyle(color: context.palette.mutedText, fontSize: 13),
@@ -197,79 +262,69 @@ class _FileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commit = item.currentCommit;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.file.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasActiveEdit) ...[
+                const SizedBox(width: 6),
+                const EditingChip(),
+              ],
+              if (commit != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
                   child: Text(
-                    item.file.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    'v${commit.versionNo}',
+                    style: TextStyle(color: context.palette.mutedText),
                   ),
                 ),
-                if (hasActiveEdit) ...[
-                  const SizedBox(width: 6),
-                  const EditingChip(),
-                ],
-                if (commit != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      'v${commit.versionNo}',
-                      style: TextStyle(color: context.palette.mutedText),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            if (commit != null) ...[
-              Text(
-                '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                formatBytes(commit.sizeBytes),
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
-                ),
-              ),
             ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                CardButton(label: 'Open', onPressed: onOpen),
-                CardButton(
-                  label: 'Edit',
-                  onPressed: () => context.push('/files/${item.file.id}/edit'),
-                ),
-                CardButton(
-                  label: 'History',
-                  onPressed: () =>
-                      context.push('/files/${item.file.id}/history'),
-                ),
-                CardButton(
-                  label: 'Commit',
-                  onPressed: () =>
-                      context.push('/files/${item.file.id}/commit'),
-                ),
-              ],
+          ),
+          const SizedBox(height: 4),
+          if (commit != null) ...[
+            Text(
+              '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              formatBytes(commit.sizeBytes),
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
             ),
           ],
-        ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              CardButton(label: 'Open', onPressed: onOpen),
+              CardButton(
+                label: 'Edit',
+                onPressed: () => context.push('/files/${item.file.id}/edit'),
+              ),
+              CardButton(
+                label: 'History',
+                onPressed: () => context.push('/files/${item.file.id}/history'),
+              ),
+              CardButton(
+                label: 'Commit',
+                onPressed: () => context.push('/files/${item.file.id}/commit'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

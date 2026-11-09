@@ -9,6 +9,7 @@ import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_pick.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Arguments for committing the result of an edit session (AGENTS.md 5B).
 class CommitArgs {
@@ -236,24 +237,13 @@ class _CommitPageState extends ConsumerState<CommitPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
+              PrimaryButton(
+                label: 'Commit as v$nextVersionNo',
                 onPressed: canCommit ? _commit : null,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text('Commit as v$nextVersionNo'),
+                loading: _busy,
               ),
               const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: _busy ? null : _back,
-                child: const Text('Cancel'),
-              ),
+              SecondaryButton(label: 'Cancel', onPressed: _busy ? null : _back),
             ],
           ),
         ),
@@ -277,52 +267,48 @@ class _PickCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final picked = this.picked;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'File to commit',
-              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: picked == null
-                      ? const Text('No file picked yet.')
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              picked.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'File to commit',
+            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: picked == null
+                    ? const Text('No file picked yet.')
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            picked.name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            formatBytes(picked.bytes.length),
+                            style: TextStyle(
+                              color: context.palette.mutedText,
+                              fontSize: 13,
                             ),
-                            Text(
-                              formatBytes(picked.bytes.length),
-                              style: TextStyle(
-                                color: context.palette.mutedText,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-                const SizedBox(width: 8),
-                CardButton(
-                  label: picked == null ? 'Choose file' : 'Change file',
-                  onPressed: enabled ? onPick : null,
-                ),
-              ],
-            ),
-          ],
-        ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(width: 8),
+              CardButton(
+                label: picked == null ? 'Choose file' : 'Change',
+                onPressed: enabled ? onPick : null,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
