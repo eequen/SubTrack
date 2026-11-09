@@ -18,6 +18,7 @@ class BackupContents {
     required this.activities,
     required this.files,
     required this.commits,
+    this.calendarEvents = 0,
   });
 
   final int semesters;
@@ -25,6 +26,7 @@ class BackupContents {
   final int activities;
   final int files;
   final int commits;
+  final int calendarEvents;
 }
 
 /// The picked file is not a SubTrack backup, or it is damaged.
@@ -47,6 +49,7 @@ class _BackupPlan {
     required this.activities,
     required this.files,
     required this.commits,
+    required this.calendarEvents,
   });
 
   final Map<String, ArchiveFile> entries;
@@ -56,6 +59,7 @@ class _BackupPlan {
   final List<Activity> activities;
   final List<DbFile> files;
   final List<Commit> commits;
+  final List<CalendarEvent> calendarEvents;
 }
 
 /// Local backup: the whole database plus every blob as one .zip
@@ -144,9 +148,13 @@ class BackupRepo {
       await db.delete(db.files).go();
       await db.delete(db.activities).go();
       await db.delete(db.subjects).go();
+      await db.delete(db.calendarEvents).go();
       await db.delete(db.semesters).go();
       for (final semester in plan.semesters) {
         await db.into(db.semesters).insert(semester.toCompanion(true));
+      }
+      for (final event in plan.calendarEvents) {
+        await db.into(db.calendarEvents).insert(event.toCompanion(true));
       }
       for (final subject in plan.subjects) {
         await db.into(db.subjects).insert(subject.toCompanion(true));
@@ -189,8 +197,10 @@ class BackupRepo {
       final List<Activity> activities;
       final List<DbFile> files;
       final List<Commit> commits;
+      final List<CalendarEvent> calendarEvents;
       try {
         semesters = await backupDb.select(backupDb.semesters).get();
+        calendarEvents = await backupDb.select(backupDb.calendarEvents).get();
         subjects = await backupDb.select(backupDb.subjects).get();
         activities = await backupDb.select(backupDb.activities).get();
         files = await backupDb.select(backupDb.files).get();
@@ -219,12 +229,14 @@ class BackupRepo {
           activities: activities.length,
           files: files.length,
           commits: commits.length,
+          calendarEvents: calendarEvents.length,
         ),
         semesters: semesters,
         subjects: subjects,
         activities: activities,
         files: files,
         commits: commits,
+        calendarEvents: calendarEvents,
       );
     } finally {
       await backupDb.close();

@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/features/dashboard/home_providers.dart';
+import 'package:subtrack/features/dashboard/calendar_event_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/semesters/semesters_page.dart';
@@ -148,6 +150,10 @@ class HomePage extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: _DueSoonSection(isNewUser: isNewUser),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: _UpcomingEventsSection(),
             ),
           ],
         ),
@@ -349,6 +355,107 @@ class _DueCard extends StatelessWidget {
               color: dueColor,
               fontWeight: FontWeight.w600,
               fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingEventsSection extends ConsumerWidget {
+  const _UpcomingEventsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(upcomingCalendarEventsProvider);
+    final events = eventsAsync.value ?? const <CalendarEvent>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Upcoming events',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go('/calendar'),
+              child: const Text('Calendar'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (eventsAsync.isLoading && !eventsAsync.hasValue)
+          const SizedBox(
+            height: 88,
+            child: AppLoadingState(message: 'Loading events...'),
+          )
+        else if (eventsAsync.hasError && !eventsAsync.hasValue)
+          SizedBox(
+            height: 96,
+            child: AppErrorState(
+              message: 'Could not load events: ${eventsAsync.error}',
+            ),
+          )
+        else if (events.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              border: Border.all(color: context.palette.cardBorder),
+            ),
+            child: Text(
+              'No upcoming events.',
+              style: TextStyle(color: context.palette.mutedText),
+            ),
+          )
+        else
+          for (final (index, event) in events.indexed) ...[
+            if (index > 0) const SizedBox(height: 10),
+            _UpcomingEventCard(event: event),
+          ],
+      ],
+    );
+  }
+}
+
+class _UpcomingEventCard extends StatelessWidget {
+  const _UpcomingEventCard({required this.event});
+
+  final CalendarEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: () => context.go('/calendar'),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Icon(Icons.event_note_outlined, color: context.palette.accentText),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('EEE, MMM d · h:mm a').format(event.startsAt),
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

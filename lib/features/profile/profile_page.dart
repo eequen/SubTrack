@@ -165,7 +165,7 @@ class ProfilePage extends ConsumerWidget {
                     Icons.chevron_right,
                     color: context.palette.mutedText,
                   ),
-                  onTap: () => context.push('/cloud'),
+                  onTap: () => context.go('/cloud'),
                 ),
               ],
             ),

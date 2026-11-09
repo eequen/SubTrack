@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/backup_repo.dart';
 import 'package:subtrack/data/repositories/commit_repo.dart';
+import 'package:subtrack/data/repositories/calendar_event_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
@@ -32,6 +33,13 @@ void main() {
       schoolYear: '2026-2027',
       startDate: DateTime(2026, 8, 18),
       endDate: DateTime(2026, 12, 19),
+    );
+    await CalendarEventRepo(db).create(
+      semesterId: semesterId,
+      title: 'Science fair',
+      startsAt: DateTime(2026, 9, 5, 10),
+      endsAt: DateTime(2026, 9, 5, 12),
+      notes: 'Bring the poster.',
     );
     final subjectId = await SubjectRepo(db)
         .create(semesterId: semesterId, name: 'CP1', color: 0xFF3B4BDB);
@@ -100,11 +108,17 @@ void main() {
       expect(contents.activities, 1);
       expect(contents.files, 1);
       expect(contents.commits, 2);
+      expect(contents.calendarEvents, 1);
 
       await repo2.import(zipBytes);
 
       final semesters = await db2.select(db2.semesters).get();
       expect(semesters.single.schoolYear, '2026-2027');
+      final events = await db2.select(db2.calendarEvents).get();
+      expect(events.single.title, 'Science fair');
+      expect(events.single.startsAt, DateTime(2026, 9, 5, 10));
+      expect(events.single.endsAt, DateTime(2026, 9, 5, 12));
+      expect(events.single.notes, 'Bring the poster.');
       final subjects = await db2.select(db2.subjects).get();
       expect(subjects.single.name, 'CP1');
       final activities = await db2.select(db2.activities).get();

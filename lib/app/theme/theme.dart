@@ -145,8 +145,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
       inProgressBg: const Color(0xFFFFF0DC),
       finalText: const Color(0xFF1B4FB8),
       finalBg: const Color(0xFFE3EDFF),
-      submittedText: const Color(0xFF0B6B4F),
-      submittedBg: const Color(0xFFDDF5EA),
+      submittedText: const Color(0xFF12307F),
+      submittedBg: const Color(0xFFE6ECF8),
     );
   }
 
@@ -171,8 +171,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
       inProgressBg: const Color(0x339A4B00),
       finalText: const Color(0xFF91B7FF),
       finalBg: const Color(0x331B4FB8),
-      submittedText: const Color(0xFF75D7B5),
-      submittedBg: const Color(0x330B6B4F),
+      submittedText: const Color(0xFFB7C7F5),
+      submittedBg: const Color(0x3312307F),
     );
   }
 

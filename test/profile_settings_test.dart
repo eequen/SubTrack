@@ -86,6 +86,25 @@ void main() {
     await closeDatabase(tester, db);
   });
 
+  testWidgets('Profile cloud shortcut selects the Cloud navigation tab', (
+    tester,
+  ) async {
+    final db = await _pumpApp(tester);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      4,
+    );
+
+    await tester.tap(find.text('Cloud backup and restore'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
+    await closeDatabase(tester, db);
+  });
+
   testWidgets('choosing Dark switches the theme mode and saves', (
     tester,
   ) async {

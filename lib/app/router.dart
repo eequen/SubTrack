@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/scaffold_with_nav.dart';
 import 'package:subtrack/features/activities/all_activities_page.dart';
@@ -42,37 +43,53 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) =>
+            _animatedPage(state, const LoginPage()),
+      ),
       GoRoute(
         path: '/signup',
-        builder: (context, state) => const CreateAccountPage(),
+        pageBuilder: (context, state) =>
+            _animatedPage(state, const CreateAccountPage()),
       ),
       GoRoute(
         path: '/semesters',
-        builder: (context, state) => const SemestersPage(),
+        pageBuilder: (context, state) =>
+            _animatedPage(state, const SemestersPage()),
       ),
       GoRoute(
         path: '/semesters/new',
-        builder: (context, state) => const NewSemesterPage(),
+        pageBuilder: (context, state) =>
+            _animatedPage(state, const NewSemesterPage()),
       ),
       GoRoute(
         path: '/files/:fileId/commit',
-        builder: (context, state) => CommitPage(
-          fileId: state.pathParameters['fileId'] ?? '',
-          args: state.extra is CommitArgs ? state.extra as CommitArgs : null,
+        pageBuilder: (context, state) => _animatedPage(
+          state,
+          CommitPage(
+            fileId: state.pathParameters['fileId'] ?? '',
+            args: state.extra is CommitArgs ? state.extra as CommitArgs : null,
+          ),
         ),
       ),
       GoRoute(
         path: '/files/:fileId/edit',
-        builder: (context, state) => EditPage(
-          fileId: state.pathParameters['fileId'] ?? '',
-          baseCommitId: int.tryParse(state.uri.queryParameters['commit'] ?? ''),
+        pageBuilder: (context, state) => _animatedPage(
+          state,
+          EditPage(
+            fileId: state.pathParameters['fileId'] ?? '',
+            baseCommitId: int.tryParse(
+              state.uri.queryParameters['commit'] ?? '',
+            ),
+          ),
         ),
       ),
       // No bottom bar on Edit profile (AGENTS.md section 14).
       GoRoute(
         path: '/profile/edit',
-        builder: (context, state) => const EditProfilePage(),
+        pageBuilder: (context, state) =>
+            _animatedPage(state, const EditProfilePage()),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -83,7 +100,8 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
             routes: [
               GoRoute(
                 path: '/cloud',
-                builder: (context, state) => const CloudPage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const CloudPage()),
               ),
             ],
           ),
@@ -92,24 +110,34 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
             routes: [
               GoRoute(
                 path: '/subjects',
-                builder: (context, state) => const SubjectsPage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const SubjectsPage()),
               ),
               GoRoute(
                 path: '/subjects/:subjectId/activities',
-                builder: (context, state) => ActivitiesPage(
-                  subjectId: state.pathParameters['subjectId'] ?? '',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  ActivitiesPage(
+                    subjectId: state.pathParameters['subjectId'] ?? '',
+                  ),
                 ),
               ),
               GoRoute(
                 path: '/activities/:activityId',
-                builder: (context, state) => ActivityFilesPage(
-                  activityId: state.pathParameters['activityId'] ?? '',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  ActivityFilesPage(
+                    activityId: state.pathParameters['activityId'] ?? '',
+                  ),
                 ),
               ),
               GoRoute(
                 path: '/files/:fileId/history',
-                builder: (context, state) => VersionHistoryPage(
-                  fileId: state.pathParameters['fileId'] ?? '',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  VersionHistoryPage(
+                    fileId: state.pathParameters['fileId'] ?? '',
+                  ),
                 ),
               ),
             ],
@@ -119,18 +147,23 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
             routes: [
               GoRoute(
                 path: '/home',
-                builder: (context, state) => const HomePage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const HomePage()),
               ),
               GoRoute(
                 path: '/search',
-                builder: (context, state) => const SearchPage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const SearchPage()),
               ),
               GoRoute(
                 path: '/activities',
-                builder: (context, state) => AllActivitiesPage(
-                  initialFilter: state.uri.queryParameters['filter'] == 'due'
-                      ? 'due_soon'
-                      : null,
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  AllActivitiesPage(
+                    initialFilter: state.uri.queryParameters['filter'] == 'due'
+                        ? 'due_soon'
+                        : null,
+                  ),
                 ),
               ),
             ],
@@ -140,7 +173,8 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
             routes: [
               GoRoute(
                 path: '/calendar',
-                builder: (context, state) => const CalendarPage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const CalendarPage()),
               ),
             ],
           ),
@@ -149,12 +183,39 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
             routes: [
               GoRoute(
                 path: '/profile',
-                builder: (context, state) => const ProfilePage(),
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const ProfilePage()),
               ),
             ],
           ),
         ],
       ),
     ],
+  );
+}
+
+CustomTransitionPage<void> _animatedPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.025),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
   );
 }

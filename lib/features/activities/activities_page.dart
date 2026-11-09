@@ -105,7 +105,8 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
     final repo = ref.read(activityRepoProvider);
     final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (context) => SheetScaffold(
+        title: 'Activity actions',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -231,15 +232,6 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                   ),
                 ],
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _subjectId > 0 ? _createActivity : null,
-                  icon: const Icon(Icons.add),
-                  label: const Text('New activity'),
-                ),
-              ),
-              const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -256,7 +248,15 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              if (items.isNotEmpty)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _subjectId > 0 ? _createActivity : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New activity'),
+                  ),
+                ),
+              const SizedBox(height: 8),
               Expanded(
                 child: activities.when(
                   loading: () =>
@@ -265,11 +265,43 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       AppErrorState(message: 'Could not load activities: $e'),
                   data: (_) {
                     if (items.isEmpty) {
-                      return const EmptyState(
-                        icon: Icons.assignment_outlined,
-                        title: 'No activities yet.',
-                        message:
-                            'Add an activity to start tracking this subject.',
+                      return Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 340),
+                          child: DashedCard(
+                            borderColor: context.palette.accentText,
+                            onTap: _createActivity,
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_circle_outline,
+                                    size: 42,
+                                    color: context.palette.accentText,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Add your first activity',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Start tracking work for this subject.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: context.palette.mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       );
                     }
                     if (filtered.isEmpty) {

@@ -114,6 +114,18 @@ class Profiles extends Table {
   Set<Column> get primaryKey => {userId};
 }
 
+/// Standalone calendar events are device-local and are not sent to Supabase.
+class CalendarEvents extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get semesterId =>
+      integer().references(Semesters, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text()();
+  DateTimeColumn get startsAt => dateTime()();
+  DateTimeColumn get endsAt => dateTime().nullable()();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 @DriftDatabase(
   tables: [
     Semesters,
@@ -123,6 +135,7 @@ class Profiles extends Table {
     Commits,
     EditSessions,
     Profiles,
+    CalendarEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -144,7 +157,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor _local(String name) => driftDatabase(name: name);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -174,6 +187,9 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
           await m.createTable(editSessions);
+        }
+        if (from < 4) {
+          await m.createTable(calendarEvents);
         }
       },
       beforeOpen: (details) async {

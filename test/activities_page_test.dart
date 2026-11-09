@@ -49,7 +49,12 @@ Future<void> _createActivity(
   required String title,
   String? statusLabel,
 }) async {
-  await tester.tap(find.widgetWithText(TextButton, 'New activity'));
+  final addButton = find.widgetWithText(TextButton, 'New activity');
+  if (addButton.evaluate().isNotEmpty) {
+    await tester.tap(addButton);
+  } else {
+    await tester.tap(find.text('Add your first activity'));
+  }
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField).first, title);
   if (statusLabel != null) {
@@ -66,7 +71,7 @@ void main() {
 
     expect(find.text('CP1'), findsOneWidget);
     expect(find.text('0 activities'), findsOneWidget);
-    expect(find.text('No activities yet.'), findsOneWidget);
+    expect(find.text('Add your first activity'), findsOneWidget);
 
     await _createActivity(tester, title: 'Lab report', statusLabel: 'Final');
     expect(find.text('Lab report'), findsOneWidget);
@@ -95,7 +100,7 @@ void main() {
   ) async {
     final db = await _pumpActivities(tester);
 
-    await tester.tap(find.widgetWithText(TextButton, 'New activity'));
+    await tester.tap(find.text('Add your first activity'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
     await tester.pumpAndSettle();

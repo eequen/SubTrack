@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/calendar_event_repo.dart';
 import 'package:subtrack/data/storage/blob_store.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
@@ -86,6 +87,30 @@ Future<void> _seedSubjectAndActivity(
 }
 
 void main() {
+  testWidgets('home shows upcoming standalone calendar events', (tester) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {
+        'subtrack_fake_auth_email': 'kent@gmail.com',
+        'selected_semester:kent@gmail.com': 1,
+      },
+    );
+    final semesterId = await _seedSemester(db);
+    await CalendarEventRepo(db).create(
+      semesterId: semesterId,
+      title: 'Science fair',
+      startsAt: DateTime.now().add(const Duration(days: 2)),
+      notes: 'Bring the poster.',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upcoming events'), findsOneWidget);
+    expect(find.text('Science fair'), findsOneWidget);
+
+    await db.close();
+  });
+
   testWidgets(
     'a signed-in session without a chosen semester shows the new-user home',
     (tester) async {

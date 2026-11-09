@@ -257,7 +257,8 @@ class _CloudPageState extends ConsumerState<CloudPage> {
             'Semesters: ${contents.semesters} · '
             'Subjects: ${contents.subjects} · '
             'Activities: ${contents.activities} · '
-            'Versions: ${contents.commits}\n\n'
+            'Versions: ${contents.commits} · '
+            'Calendar events: ${contents.calendarEvents}\n\n'
             'This cannot be undone.',
           ),
           actions: [
