@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Local notification reminders for deadlines (AGENTS.md Phase 4).
          POST_NOTIFICATIONS is declared by the flutter_local_notifications
          plugin itself; these two cover re-scheduling after a reboot and
