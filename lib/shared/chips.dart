@@ -42,7 +42,7 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, bg) = statusColors(status, context.palette);
     final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(99),
@@ -63,10 +63,7 @@ class StatusChip extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(99),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Center(child: chip),
-          ),
+          child: chip,
         ),
       ),
     );

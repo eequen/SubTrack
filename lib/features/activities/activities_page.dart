@@ -82,6 +82,25 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
     }
   }
 
+  Future<void> _createActivity() async {
+    final result = await showNewActivityDialog(context);
+    if (result == null || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .create(
+            subjectId: _subjectId,
+            title: result.title,
+            notes: result.notes,
+            deadline: result.deadline,
+            status: result.status,
+          );
+      await _syncReminders(askPermission: _isFuture(result.deadline));
+    } catch (error) {
+      _snack('Could not create activity: $error');
+    }
+  }
+
   Future<void> _runAction(Activity activity) async {
     final repo = ref.read(activityRepoProvider);
     final action = await showModalBottomSheet<String>(
@@ -212,6 +231,14 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                   ),
                 ],
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _subjectId > 0 ? _createActivity : null,
+                  icon: const Icon(Icons.add),
+                  label: const Text('New activity'),
+                ),
+              ),
               const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -241,7 +268,8 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       return const EmptyState(
                         icon: Icons.assignment_outlined,
                         title: 'No activities yet.',
-                        message: 'Tap + to add your first activity.',
+                        message:
+                            'Add an activity to start tracking this subject.',
                       );
                     }
                     if (filtered.isEmpty) {

@@ -100,6 +100,15 @@ void main() {
       expect(find.text('No semester yet'), findsOneWidget);
       expect(find.text('Add your first semester'), findsOneWidget);
       expect(find.text('Quick access'), findsNothing);
+      expect(
+        tester
+            .widgetList<NavigationDestination>(
+              find.byType(NavigationDestination),
+            )
+            .map((destination) => destination.label)
+            .toList(),
+        ['Cloud', 'Subjects', 'Home', 'Calendar', 'Profile'],
+      );
       await tester.tap(find.text('Add your first semester'));
       await tester.pumpAndSettle();
       expect(find.text('Choose semester'), findsOneWidget);

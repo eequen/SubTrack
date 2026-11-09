@@ -51,9 +51,16 @@ void main() {
   testWidgets('login screen shows fields and offline note', (tester) async {
     final db = await _pumpApp(tester);
 
-    expect(find.text('SubTrack'), findsOneWidget);
+    expect(find.text('SubTrack'), findsNothing);
     expect(find.text('Username'), findsOneWidget);
-    expect(find.byType(BrandLogo), findsOneWidget);
+    expect(find.byType(BrandLogo), findsNWidgets(2));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is BrandLogo && widget.variant == BrandLogoVariant.wordmark,
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Password'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Log in'), findsOneWidget);
     expect(

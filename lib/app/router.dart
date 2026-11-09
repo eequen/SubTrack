@@ -25,9 +25,9 @@ import 'package:subtrack/features/subjects/subjects_page.dart';
 /// auth screen go to `/home`. The router is rebuilt by [routerProvider]
 /// whenever the auth state changes, so no refreshListenable is needed.
 ///
+/// - Cloud, Subjects, Home, Calendar, and Profile occupy the five tabs.
 /// - Home owns Search and All activities.
 /// - Subjects owns its activity, file, and history screens.
-/// - Calendar and Profile each have their own tab.
 /// - Login, signup, the semester chooser, commit, and (later) edit-profile
 ///   live outside the shell: no bottom bar there.
 GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
@@ -78,24 +78,12 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
         builder: (context, state, navigationShell) =>
             ScaffoldWithNav(navigationShell: navigationShell),
         branches: [
-          // Branch 0: Home, Search, and All activities.
+          // Branch 0: Cloud backup.
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/home',
-                builder: (context, state) => const HomePage(),
-              ),
-              GoRoute(
-                path: '/search',
-                builder: (context, state) => const SearchPage(),
-              ),
-              GoRoute(
-                path: '/activities',
-                builder: (context, state) => AllActivitiesPage(
-                  initialFilter: state.uri.queryParameters['filter'] == 'due'
-                      ? 'due_soon'
-                      : null,
-                ),
+                path: '/cloud',
+                builder: (context, state) => const CloudPage(),
               ),
             ],
           ),
@@ -126,7 +114,28 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
               ),
             ],
           ),
-          // Branch 2: Calendar.
+          // Branch 2: Home, Search, and All activities.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomePage(),
+              ),
+              GoRoute(
+                path: '/search',
+                builder: (context, state) => const SearchPage(),
+              ),
+              GoRoute(
+                path: '/activities',
+                builder: (context, state) => AllActivitiesPage(
+                  initialFilter: state.uri.queryParameters['filter'] == 'due'
+                      ? 'due_soon'
+                      : null,
+                ),
+              ),
+            ],
+          ),
+          // Branch 3: Calendar.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -135,16 +144,12 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
               ),
             ],
           ),
-          // Branch 3: Profile and Cloud backup.
+          // Branch 4: Profile.
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/profile',
                 builder: (context, state) => const ProfilePage(),
-              ),
-              GoRoute(
-                path: '/cloud',
-                builder: (context, state) => const CloudPage(),
               ),
             ],
           ),

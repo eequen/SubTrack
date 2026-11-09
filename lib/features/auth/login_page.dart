@@ -70,14 +70,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 children: [
                   const BrandLogo.icon(height: 104, onDarkSurface: true),
-                  const SizedBox(height: 12),
-                  Text(
-                    'SubTrack',
-                    style: textTheme.headlineMedium?.copyWith(
-                      color: context.palette.onAccent,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  const SizedBox(height: 16),
+                  const BrandLogo.wordmark(height: 36, onDarkSurface: true),
                   const SizedBox(height: 8),
                   Text(
                     'Every subject, every version, safely kept.',

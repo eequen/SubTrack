@@ -49,7 +49,7 @@ Future<void> _createActivity(
   required String title,
   String? statusLabel,
 }) async {
-  await tester.tap(find.byTooltip('Add'));
+  await tester.tap(find.widgetWithText(TextButton, 'New activity'));
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField).first, title);
   if (statusLabel != null) {
@@ -95,13 +95,19 @@ void main() {
   ) async {
     final db = await _pumpActivities(tester);
 
-    await tester.tap(find.byTooltip('Add'));
+    await tester.tap(find.widgetWithText(TextButton, 'New activity'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
     await tester.pumpAndSettle();
 
     expect(find.text('Activity title is required.'), findsOneWidget);
-    expect(find.text('New activity'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('New activity'),
+      ),
+      findsOneWidget,
+    );
 
     await db.close();
     await tester.pump();
@@ -113,6 +119,7 @@ void main() {
     final db = await _pumpActivities(tester);
     await _createActivity(tester, title: 'Lab report');
 
+    expect(tester.getSize(find.byType(StatusChip)).height, lessThan(44));
     await tester.tap(find.byType(StatusChip));
     await tester.pumpAndSettle();
     expect(find.text('Set status'), findsOneWidget);

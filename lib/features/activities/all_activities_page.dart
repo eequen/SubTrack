@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/features/activities/activity_dialog.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/activities/all_activities_providers.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
 import 'package:subtrack/shared/status_sheet.dart';
 import 'package:subtrack/shared/ui_components.dart';
@@ -52,6 +54,81 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
         SnackBar(content: Text('Could not update status: $error')),
       );
     }
+  }
+
+  Future<void> _addActivity() async {
+    final semesterId = ref.read(selectedSemesterProvider);
+    if (semesterId == null) {
+      _snack('Choose a semester before adding an activity.');
+      return;
+    }
+
+    try {
+      final subjects = await ref.read(subjectsProvider(semesterId).future);
+      if (!mounted) return;
+      if (subjects.isEmpty) {
+        _snack('Create a subject before adding an activity.');
+        return;
+      }
+
+      final subjectId = await showModalBottomSheet<int>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SheetScaffold(
+          title: 'Choose a subject',
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: subjects.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final subject = subjects[index].subject;
+                return AppCard(
+                  padding: EdgeInsets.zero,
+                  onTap: () => Navigator.of(context).pop(subject.id),
+                  child: ListTile(
+                    title: Text(subject.name),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: context.palette.mutedText,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      if (subjectId == null || !mounted) return;
+
+      final result = await showNewActivityDialog(context);
+      if (result == null || !mounted) return;
+      await ref
+          .read(activityRepoProvider)
+          .create(
+            subjectId: subjectId,
+            title: result.title,
+            notes: result.notes,
+            deadline: result.deadline,
+            status: result.status,
+          );
+      final reminders = ref.read(reminderServiceProvider);
+      if (result.deadline?.isAfter(DateTime.now()) == true) {
+        await reminders.requestPermission();
+      }
+      await reminders.syncAll();
+    } catch (error) {
+      _snack('Could not add activity: $error');
+    }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -106,6 +183,11 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                       ],
                     ),
                   ),
+                  TextButton.icon(
+                    onPressed: canBuildList ? _addActivity : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New activity'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -141,7 +223,7 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                             return const EmptyState(
                               icon: Icons.assignment_outlined,
                               title: 'No activities yet.',
-                              message: 'Tap + to add your first activity.',
+                              message: 'Add an activity to start tracking your work.',
                             );
                           }
                           if (filtered.isEmpty) {
