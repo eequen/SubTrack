@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:subtrack/app/scaffold_with_nav.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/features/dashboard/home_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/features/semesters/semesters_page.dart';
+import 'package:subtrack/shared/brand_logo.dart';
 
 final _dueSoonFormat = DateFormat('MMM d');
 
@@ -37,12 +38,26 @@ bool isOverdue(DateTime? deadline) {
   return deadline.isBefore(today);
 }
 
+Future<void> _openSemesterChooser(BuildContext context) async {
+  final createNew = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => SemesterChooserSheet(
+      onSelected: (_) => Navigator.of(sheetContext).pop(false),
+      onCreate: () => Navigator.of(sheetContext).pop(true),
+      onClose: () => Navigator.of(sheetContext).pop(false),
+    ),
+  );
+  if (createNew == true && context.mounted) {
+    context.push('/semesters/new');
+  }
+}
+
 /// Screen 3 and 4 from AGENTS.md section 14: the Home dashboard.
 ///
-/// Returning students see the chosen semester's pill, the next deadlines,
-/// quick access icons, and the status progress bar. A student without a
-/// chosen semester gets the new-user state: an amber pill, a dashed
-/// "add your first semester" card, and a highlighted Semesters icon.
+/// Returning students see the chosen semester's pill, progress, and due
+/// activities. A student without a chosen semester gets an amber pill and
+/// a dashed "add your first semester" card.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -67,57 +82,72 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppTheme.screenPadding),
+          padding: EdgeInsets.zero,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            Container(
+              decoration: BoxDecoration(
+                color: context.palette.card,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(32),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        isNewUser ? 'Welcome,' : 'Welcome back,',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: context.palette.mutedText,
-                        ),
+                      const BrandLogo.wordmark(height: 28),
+                      const Spacer(),
+                      IconButton(
+                        tooltip: 'Search',
+                        onPressed: () => context.go('/search'),
+                        icon: const Icon(Icons.search),
                       ),
-                      Text(
-                        displayName,
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: context.palette.text,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 4),
+                      _ProfileAvatar(
+                        profilePath: profile?.avatarPath,
+                        name: displayName,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                _ProfileAvatar(
-                  profilePath: profile?.avatarPath,
-                  name: displayName,
-                ),
-              ],
+                  const SizedBox(height: 18),
+                  Text(
+                    isNewUser ? 'Welcome,' : 'Welcome back,',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: context.palette.mutedText,
+                    ),
+                  ),
+                  Text(
+                    displayName,
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: context.palette.text,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  _SemesterPill(
+                    isNewUser: isNewUser,
+                    current: current,
+                    onTap: () => _openSemesterChooser(context),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _SemesterPill(isNewUser: isNewUser, current: current),
-            const SizedBox(height: 20),
-            _DueSoonSection(isNewUser: isNewUser),
-            const SizedBox(height: 20),
-            const Text(
-              'Quick access',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Transform.translate(
+              offset: const Offset(0, -20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: isNewUser
+                    ? const _FirstSemesterCard()
+                    : const _ThisSemesterSection(),
+              ),
             ),
-            const SizedBox(height: 10),
-            _QuickAccess(isNewUser: isNewUser),
-            if (!isNewUser) ...[
-              const SizedBox(height: 20),
-              const _ThisSemesterSection(),
-            ] else ...[
-              const SizedBox(height: 16),
-              const _FirstSemesterCard(),
-            ],
-            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: _DueSoonSection(isNewUser: isNewUser),
+            ),
           ],
         ),
       ),
@@ -138,16 +168,13 @@ class _ProfileAvatar extends StatelessWidget {
       child: CircleAvatar(
         radius: 22,
         backgroundColor: context.palette.accent,
+        foregroundColor: context.palette.onAccent,
         foregroundImage: profilePath == null || profilePath!.isEmpty
             ? null
             : FileImage(File(profilePath!)),
         child: Text(
           name.isEmpty ? 'S' : name[0].toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 17,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
       ),
     );
@@ -155,10 +182,15 @@ class _ProfileAvatar extends StatelessWidget {
 }
 
 class _SemesterPill extends StatelessWidget {
-  const _SemesterPill({required this.isNewUser, required this.current});
+  const _SemesterPill({
+    required this.isNewUser,
+    required this.current,
+    required this.onTap,
+  });
 
   final bool isNewUser;
   final SemesterListItem? current;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -170,15 +202,15 @@ class _SemesterPill extends StatelessWidget {
             'No semester yet',
           )
         : (
-            context.palette.inProgressBg,
-            context.palette.inProgressText,
+            context.palette.accent.withValues(alpha: 0.12),
+            context.palette.accentText,
             '${semesterLabel(current.semester.term)} - SY '
                 '${current.semester.schoolYear}',
           );
     return GestureDetector(
-      onTap: () => context.push('/semesters'),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(999),
@@ -318,55 +350,6 @@ class _DueCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _QuickAccess extends StatelessWidget {
-  const _QuickAccess({required this.isNewUser});
-
-  final bool isNewUser;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: QuickAccessTile(
-            icon: isNewUser ? Icons.school : Icons.school_outlined,
-            label: 'Semesters',
-            highlighted: isNewUser,
-            onTap: () => context.push('/semesters'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.book_outlined,
-            label: 'Subjects',
-            enabled: !isNewUser,
-            onTap: () => context.go('/subjects'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.assignment_outlined,
-            label: 'Activities',
-            enabled: !isNewUser,
-            onTap: () => context.go('/activities'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.calendar_month_outlined,
-            label: 'Calendar',
-            enabled: !isNewUser,
-            onTap: () => context.go('/calendar'),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -552,7 +535,7 @@ class _FirstSemesterCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.push('/semesters'),
+        onTap: () => _openSemesterChooser(context),
         child: CustomPaint(
           painter: _DashedPainter(
             color: context.palette.accent.withValues(alpha: 0.6),

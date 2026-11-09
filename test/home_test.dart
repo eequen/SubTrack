@@ -24,6 +24,7 @@ void _tallView(WidgetTester tester) {
 Future<AppDatabase> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefsInitial = const {},
+  String initialLocation = '/home',
 }) async {
   SharedPreferences.setMockInitialValues(prefsInitial);
   final prefs = await SharedPreferences.getInstance();
@@ -35,6 +36,7 @@ Future<AppDatabase> _pumpApp(
         sharedPreferencesProvider.overrideWithValue(prefs),
         authServiceProvider.overrideWithValue(auth),
         databaseProvider.overrideWithValue(db),
+        initialLocationProvider.overrideWithValue(initialLocation),
       ],
       child: const SubTrackApp(),
     ),
@@ -97,16 +99,97 @@ void main() {
       expect(find.text('kent'), findsOneWidget);
       expect(find.text('No semester yet'), findsOneWidget);
       expect(find.text('Add your first semester'), findsOneWidget);
-      expect(find.text('Start here'), findsOneWidget);
-      // The quick-access tile and navigation destination are both disabled
-      // for brand-new students.
-      expect(find.text('Subjects'), findsNWidgets(2));
-      await tester.tap(find.text('Subjects').last);
+      expect(find.text('Quick access'), findsNothing);
+      await tester.tap(find.text('Add your first semester'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose semester'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+
+      // The Subjects tab stays visible but is disabled until a semester exists.
+      expect(find.text('Subjects'), findsOneWidget);
+      await tester.tap(find.text('Subjects'));
       await tester.pump();
       expect(find.text('Welcome,'), findsOneWidget);
       await db.close();
     },
   );
+
+  testWidgets('semester pill opens a chooser sheet and keeps the home route', (
+    tester,
+  ) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {
+        'subtrack_fake_auth_email': 'kent@gmail.com',
+        'selected_semester:kent@gmail.com': 1,
+      },
+    );
+    final semesterId = await _seedSemester(db);
+    expect(semesterId, 1);
+    final secondId = await db
+        .into(db.semesters)
+        .insert(
+          SemestersCompanion.insert(
+            term: 'second',
+            schoolYear: '2026-2027',
+            startDate: DateTime(2027, 1, 10),
+            endDate: DateTime(2027, 5, 20),
+          ),
+        );
+    expect(secondId, 2);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1st Semester - SY 2026-2027'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose semester'), findsOneWidget);
+
+    await tester.tap(find.text('2nd Semester · SY 2026-2027'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose semester'), findsNothing);
+    expect(find.text('2nd Semester - SY 2026-2027'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    await db.close();
+  });
+
+  testWidgets('new semester form steps school year and previews changes', (
+    tester,
+  ) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {'subtrack_fake_auth_email': 'kent@gmail.com'},
+      initialLocation: '/semesters/new',
+    );
+
+    final year = DateTime.now().year;
+    expect(find.text('School year'), findsOneWidget);
+    expect(find.text('$year – ${year + 1}'), findsOneWidget);
+    expect(find.text('Preview'), findsOneWidget);
+    await tester.tap(find.byTooltip('Next school year'));
+    await tester.pump();
+    expect(find.text('${year + 1} – ${year + 2}'), findsOneWidget);
+    expect(find.textContaining('SY ${year + 1}-${year + 2}'), findsOneWidget);
+    await db.close();
+  });
+
+  testWidgets('semesters deep link shows chooser content', (tester) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {'subtrack_fake_auth_email': 'kent@gmail.com'},
+      initialLocation: '/semesters',
+    );
+
+    expect(find.text('Choose semester'), findsOneWidget);
+    expect(
+      find.text('No semesters yet. Add one to get started.'),
+      findsOneWidget,
+    );
+    expect(find.text('New semester'), findsOneWidget);
+    await db.close();
+  });
 
   testWidgets('the chosen semester shows the pill, due card, and progress', (
     tester,

@@ -87,8 +87,8 @@ void main() {
 
     expect(find.text('Welcome,'), findsOneWidget);
     expect(find.text('No semester yet'), findsOneWidget);
-    expect(find.text('Semesters'), findsOneWidget);
-    expect(find.text('Start here'), findsOneWidget);
+    expect(find.text('Add your first semester'), findsOneWidget);
+    expect(find.text('Quick access'), findsNothing);
     await _close(db, tester);
   });
 
