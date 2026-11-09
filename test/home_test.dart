@@ -98,8 +98,12 @@ void main() {
       expect(find.text('No semester yet'), findsOneWidget);
       expect(find.text('Add your first semester'), findsOneWidget);
       expect(find.text('Start here'), findsOneWidget);
-      // The subjects icon is disabled for brand-new students.
-      expect(find.text('Subjects'), findsOneWidget);
+      // The quick-access tile and navigation destination are both disabled
+      // for brand-new students.
+      expect(find.text('Subjects'), findsNWidgets(2));
+      await tester.tap(find.text('Subjects').last);
+      await tester.pump();
+      expect(find.text('Welcome,'), findsOneWidget);
       await db.close();
     },
   );

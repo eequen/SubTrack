@@ -41,14 +41,15 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, bg) = statusColors(status, context.palette);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         statusLabel(status),
-        style: TextStyle(color: text, fontSize: 12),
+        style: Theme.of(context).textTheme.labelMedium
+            ?.copyWith(color: text, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -62,14 +63,17 @@ class CurrentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: context.palette.finalBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         'Current',
-        style: TextStyle(color: context.palette.finalText, fontSize: 12),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: context.palette.finalText,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -83,14 +87,17 @@ class EditingChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: context.palette.inProgressBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         'Editing',
-        style: TextStyle(color: context.palette.inProgressText, fontSize: 12),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: context.palette.inProgressText,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -107,14 +114,17 @@ class DeadlineChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: context.palette.deadlineBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         _format.format(deadline),
-        style: TextStyle(color: context.palette.deadlineText, fontSize: 12),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: context.palette.deadlineText,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

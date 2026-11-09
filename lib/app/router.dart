@@ -25,10 +25,9 @@ import 'package:subtrack/features/subjects/subjects_page.dart';
 /// auth screen go to `/home`. The router is rebuilt by [routerProvider]
 /// whenever the auth state changes, so no refreshListenable is needed.
 ///
-/// - Branch 1 (home tab) holds every subject/activity/file screen so they
-///   all show the bottom bar with Home highlighted.
-/// - Search is its own branch, and the profile branch holds Profile and
-///   Cloud backup.
+/// - Home owns Search and All activities.
+/// - Subjects owns its activity, file, and history screens.
+/// - Calendar and Profile each have their own tab.
 /// - Login, signup, the semester chooser, commit, and (later) edit-profile
 ///   live outside the shell: no bottom bar there.
 GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
@@ -79,22 +78,30 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
         builder: (context, state, navigationShell) =>
             ScaffoldWithNav(navigationShell: navigationShell),
         branches: [
-          // Branch 0: Search
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/search',
-                builder: (context, state) => const SearchPage(),
-              ),
-            ],
-          ),
-          // Branch 1: Home (middle tab) and everything it reaches.
+          // Branch 0: Home, Search, and All activities.
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/home',
                 builder: (context, state) => const HomePage(),
               ),
+              GoRoute(
+                path: '/search',
+                builder: (context, state) => const SearchPage(),
+              ),
+              GoRoute(
+                path: '/activities',
+                builder: (context, state) => AllActivitiesPage(
+                  initialFilter: state.uri.queryParameters['filter'] == 'due'
+                      ? 'due_soon'
+                      : null,
+                ),
+              ),
+            ],
+          ),
+          // Branch 1: Subjects and the screens nested below them.
+          StatefulShellBranch(
+            routes: [
               GoRoute(
                 path: '/subjects',
                 builder: (context, state) => const SubjectsPage(),
@@ -106,22 +113,10 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
                 ),
               ),
               GoRoute(
-                path: '/activities',
-                builder: (context, state) => AllActivitiesPage(
-                  initialFilter: state.uri.queryParameters['filter'] == 'due'
-                      ? 'due_soon'
-                      : null,
-                ),
-              ),
-              GoRoute(
                 path: '/activities/:activityId',
                 builder: (context, state) => ActivityFilesPage(
                   activityId: state.pathParameters['activityId'] ?? '',
                 ),
-              ),
-              GoRoute(
-                path: '/calendar',
-                builder: (context, state) => const CalendarPage(),
               ),
               GoRoute(
                 path: '/files/:fileId/history',
@@ -131,7 +126,16 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
               ),
             ],
           ),
-          // Branch 2: Profile
+          // Branch 2: Calendar.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/calendar',
+                builder: (context, state) => const CalendarPage(),
+              ),
+            ],
+          ),
+          // Branch 3: Profile and Cloud backup.
           StatefulShellBranch(
             routes: [
               GoRoute(

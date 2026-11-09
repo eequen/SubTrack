@@ -55,6 +55,7 @@ abstract final class AppColors {
   static const navy = Color(0xFF12307F);
   static const brandBlue = Color(0xFF2077BD);
   static const sky = Color(0xFF55ABEE);
+  static const cardShadow = Color(0x1412307F);
 
   /// Fixed badge colors picked when creating a subject. Each subject stores
   /// its own color, so these do not follow the theme accent.
