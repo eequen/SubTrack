@@ -22,6 +22,9 @@ Future<AppDatabase> _pumpApp(
   WidgetTester tester, {
   String initialLocation = '/login',
 }) async {
+  // The login and create-account forms are taller than the default 600 px
+  // test surface. A phone is 844 px tall, so use a realistic tall viewport.
+  _tallView(tester);
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final auth = FakeAuthService(prefs: prefs);

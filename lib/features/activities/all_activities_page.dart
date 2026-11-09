@@ -5,6 +5,7 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/activities/all_activities_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Screen 9 from AGENTS.md section 14: every activity in the chosen
 /// semester across all subjects, with filter chips (All, Due soon, and the
@@ -68,16 +69,23 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        const SectionLabel(
+                          'Activities / Semester',
+                          showRule: false,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
                           'All activities',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(color: context.palette.text),
                         ),
                         Text(
                           '${items.length} ${items.length == 1 ? 'activity' : 'activities'}',
-                          style: TextStyle(
-                            color: context.palette.mutedText,
-                            fontSize: 13,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: context.palette.mutedText,
+                                letterSpacing: 0.2,
+                              ),
                         ),
                       ],
                     ),
@@ -125,8 +133,10 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                             itemCount: filtered.length,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (context, index) =>
-                                _AllActivityCard(item: filtered[index]),
+                            itemBuilder: (context, index) => _AllActivityCard(
+                              item: filtered[index],
+                              index: index,
+                            ),
                           );
                         },
                       ),
@@ -182,9 +192,10 @@ class _NoSemesterState extends StatelessWidget {
 }
 
 class _AllActivityCard extends StatelessWidget {
-  const _AllActivityCard({required this.item});
+  const _AllActivityCard({required this.item, required this.index});
 
   final AllActivitiesItem item;
+  final int index;
 
   String get _filesLabel {
     final n = item.fileCount;
@@ -197,55 +208,68 @@ class _AllActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activity = item.activity;
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
     return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
+      color: palette.card,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        side: BorderSide(color: palette.cardBorder),
+      ),
+      child: InkWell(
         onTap: () => context.push('/activities/${activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                children: [
+                  IndexStamp(
+                    '0${index + 1}',
+                    size: 24,
+                    color: palette.mutedText,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
                       activity.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: textTheme.titleMedium?.copyWith(
+                        color: palette.text,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        StatusChip(status: activity.status),
-                        if (activity.deadline != null) ...[
-                          const SizedBox(width: 8),
-                          DeadlineChip(deadline: activity.deadline!),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _filesLabel,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                  ),
+                  const Icon(Icons.chevron_right, size: 20),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                item.subjectName,
+                style: textTheme.labelSmall?.copyWith(
+                  color: palette.mutedText,
+                  letterSpacing: 0.2,
                 ),
               ),
-              Icon(Icons.chevron_right, color: context.palette.mutedText),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  StatusChip(status: activity.status),
+                  if (activity.deadline != null)
+                    DeadlineChip(deadline: activity.deadline!),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _filesLabel,
+                style: textTheme.labelSmall?.copyWith(
+                  color: palette.mutedText,
+                  letterSpacing: 0.2,
+                ),
+              ),
             ],
           ),
         ),

@@ -11,10 +11,7 @@ class CardButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 44,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        child: Text(label, style: const TextStyle(fontSize: 13)),
-      ),
+      child: OutlinedButton(onPressed: onPressed, child: Text(label)),
     );
   }
 }

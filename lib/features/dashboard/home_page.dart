@@ -12,6 +12,7 @@ import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/features/dashboard/home_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 final _dueSoonFormat = DateFormat('MMM d');
 
@@ -69,7 +70,12 @@ class HomePage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppTheme.screenPadding),
           children: [
+            SectionLabel(
+              'Student desk / ${DateFormat('MMM d').format(DateTime.now())}',
+            ),
+            const SizedBox(height: 14),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: Column(
@@ -77,14 +83,14 @@ class HomePage extends ConsumerWidget {
                     children: [
                       Text(
                         isNewUser ? 'Welcome,' : 'Welcome back,',
-                        style: textTheme.bodyMedium?.copyWith(
+                        style: textTheme.labelLarge?.copyWith(
                           color: context.palette.mutedText,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         displayName,
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        style: textTheme.headlineLarge?.copyWith(
                           color: context.palette.text,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -99,14 +105,18 @@ class HomePage extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _SemesterPill(isNewUser: isNewUser, current: current),
             const SizedBox(height: 20),
             _DueSoonSection(isNewUser: isNewUser),
-            const SizedBox(height: 20),
-            const Text(
+            const SizedBox(height: 22),
+            const SectionLabel('02 / Shortcuts'),
+            const SizedBox(height: 8),
+            Text(
               'Quick access',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: textTheme.titleLarge?.copyWith(
+                color: context.palette.text,
+              ),
             ),
             const SizedBox(height: 10),
             _QuickAccess(isNewUser: isNewUser),
@@ -133,22 +143,36 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final initial = Text(
+      name.isEmpty ? 'S' : name[0].toUpperCase(),
+      style: TextStyle(
+        color: palette.onAccent,
+        fontWeight: FontWeight.w700,
+        fontSize: 17,
+        fontFamily: AppTheme.serifFamily,
+      ),
+    );
+    final hasPhoto = profilePath != null && profilePath!.isNotEmpty;
+
     return GestureDetector(
       onTap: () => context.go('/profile'),
-      child: CircleAvatar(
-        radius: 22,
-        backgroundColor: context.palette.accent,
-        foregroundImage: profilePath == null || profilePath!.isEmpty
-            ? null
-            : FileImage(File(profilePath!)),
-        child: Text(
-          name.isEmpty ? 'S' : name[0].toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 17,
-          ),
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: palette.accent,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: palette.accentText.withValues(alpha: 0.3)),
         ),
+        clipBehavior: Clip.antiAlias,
+        child: hasPhoto
+            ? Image.file(
+                File(profilePath!),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Center(child: initial),
+              )
+            : Center(child: initial),
       ),
     );
   }
@@ -178,27 +202,27 @@ class _SemesterPill extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/semesters'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: fg.withValues(alpha: 0.34)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(width: 6, height: 6, color: fg),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: TextStyle(
-                  color: fg,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(color: fg, letterSpacing: 0.2),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 6),
-            Icon(Icons.keyboard_arrow_down, color: fg, size: 18),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down, color: fg, size: 17),
           ],
         ),
       ),
@@ -216,15 +240,20 @@ class _DueSoonSection extends ConsumerWidget {
     final dueAsync = ref.watch(dueSoonProvider);
     final due = dueAsync.value ?? const <UpcomingActivity>[];
 
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SectionLabel('01 / Deadlines'),
+        const SizedBox(height: 8),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 'Due very soon',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: textTheme.titleLarge?.copyWith(
+                  color: context.palette.text,
+                ),
               ),
             ),
             TextButton(
@@ -233,7 +262,7 @@ class _DueSoonSection extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         if (due.isEmpty)
           Container(
             width: double.infinity,
@@ -247,13 +276,15 @@ class _DueSoonSection extends ConsumerWidget {
               isNewUser
                   ? 'No deadlines. Add a semester first.'
                   : 'Nothing due soon.',
-              style: TextStyle(color: context.palette.mutedText),
+              style: textTheme.bodyMedium?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
           )
         else
           for (final (index, item) in due.indexed) ...[
-            if (index > 0) const SizedBox(height: 10),
-            _DueCard(item: item),
+            if (index > 0) const SizedBox(height: 8),
+            _DueCard(item: item, index: index),
           ],
       ],
     );
@@ -261,57 +292,74 @@ class _DueSoonSection extends ConsumerWidget {
 }
 
 class _DueCard extends StatelessWidget {
-  const _DueCard({required this.item});
+  const _DueCard({required this.item, required this.index});
 
   final UpcomingActivity item;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
     final overdue = isOverdue(item.activity.deadline);
-    final dueColor = overdue
-        ? context.palette.overdue
-        : context.palette.deadlineText;
+    final dueColor = overdue ? palette.overdue : palette.deadlineText;
 
     return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
+      color: palette.card,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        side: BorderSide(color: palette.cardBorder),
+      ),
+      child: InkWell(
         onTap: () => context.push('/activities/${item.activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
+        child: IntrinsicHeight(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Container(width: 3, color: dueColor),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.activity.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: context.palette.text,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          IndexStamp(
+                            '0${index + 1}',
+                            size: 23,
+                            color: dueColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.subjectName,
+                              style: textTheme.labelSmall?.copyWith(
+                                color: palette.mutedText,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            dueLabel(item.activity.deadline ?? DateTime.now()),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: dueColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
+                      const SizedBox(height: 7),
+                      Text(
+                        item.activity.title,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: palette.text,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                dueLabel(item.activity.deadline ?? DateTime.now()),
-                style: TextStyle(
-                  color: dueColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -329,42 +377,54 @@ class _QuickAccess extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: QuickAccessTile(
-            icon: isNewUser ? Icons.school : Icons.school_outlined,
-            label: 'Semesters',
-            highlighted: isNewUser,
-            onTap: () => context.push('/semesters'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: QuickAccessTile(
+                number: '01',
+                icon: isNewUser ? Icons.school : Icons.school_outlined,
+                label: 'Semesters',
+                highlighted: isNewUser,
+                onTap: () => context.push('/semesters'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: QuickAccessTile(
+                number: '02',
+                icon: Icons.book_outlined,
+                label: 'Subjects',
+                enabled: !isNewUser,
+                onTap: () => context.go('/subjects'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.book_outlined,
-            label: 'Subjects',
-            enabled: !isNewUser,
-            onTap: () => context.go('/subjects'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.assignment_outlined,
-            label: 'Activities',
-            enabled: !isNewUser,
-            onTap: () => context.go('/activities'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: QuickAccessTile(
-            icon: Icons.calendar_month_outlined,
-            label: 'Calendar',
-            enabled: !isNewUser,
-            onTap: () => context.go('/calendar'),
-          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: QuickAccessTile(
+                number: '03',
+                icon: Icons.assignment_outlined,
+                label: 'Activities',
+                enabled: !isNewUser,
+                onTap: () => context.go('/activities'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: QuickAccessTile(
+                number: '04',
+                icon: Icons.calendar_month_outlined,
+                label: 'Calendar',
+                enabled: !isNewUser,
+                onTap: () => context.go('/calendar'),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -402,25 +462,24 @@ class _ThisSemesterSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'This semester',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(color: context.palette.text),
                     ),
                   ),
                   Text(
                     total == 1 ? '1 activity' : '$total activities',
-                    style: TextStyle(
-                      color: context.palette.mutedText,
-                      fontSize: 13,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: context.palette.mutedText),
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              const EditorialRule(),
               const SizedBox(height: 12),
               _SegmentedBar(counts: counts),
               const SizedBox(height: 12),
@@ -460,18 +519,18 @@ class _SegmentedBar extends StatelessWidget {
 
     if (segments.isEmpty) {
       return Container(
-        height: 8,
+        height: 10,
         decoration: BoxDecoration(
           color: context.palette.draftBg,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(2),
         ),
       );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(2),
       child: SizedBox(
-        height: 8,
+        height: 10,
         child: Row(
           children: [
             for (final (color, count) in segments)
@@ -503,21 +562,17 @@ class _LegendEntry extends StatelessWidget {
       children: [
         Row(
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 4),
+            Container(width: 8, height: 8, color: color),
+            const SizedBox(width: 5),
             Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: context.palette.mutedText,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
@@ -530,11 +585,8 @@ class _LegendEntry extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               '$count',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: context.palette.text,
-              ),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 15, color: context.palette.text),
             ),
           ],
         ),
@@ -558,25 +610,42 @@ class _FirstSemesterCard extends StatelessWidget {
             color: context.palette.accent.withValues(alpha: 0.6),
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             width: double.infinity,
-            child: Column(
+            child: Row(
               children: [
-                Icon(Icons.add, color: context.palette.accent),
-                SizedBox(height: 6),
-                Text(
-                  'Add your first semester',
-                  style: TextStyle(
-                    color: context.palette.accent,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: context.palette.accent),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Icon(Icons.add, color: context.palette.accent),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add your first semester',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(color: context.palette.accentText),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Group your subjects by term',
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: context.palette.mutedText),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  'Group your subjects by term',
-                  style: TextStyle(
-                    color: context.palette.mutedText,
-                    fontSize: 12,
-                  ),
+                Icon(
+                  Icons.arrow_forward,
+                  size: 18,
+                  color: context.palette.accentText,
                 ),
               ],
             ),

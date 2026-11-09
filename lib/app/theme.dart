@@ -21,33 +21,33 @@ class AccentOption {
 const accentOptions = <AccentOption>[
   AccentOption(
     key: 'indigo',
-    light: Color(0xFF3B4BDB),
-    darkFill: Color(0xFF3B4BDB),
-    darkText: Color(0xFF8E99FF),
+    light: Color(0xFF1C5D99),
+    darkFill: Color(0xFF2E86C1),
+    darkText: Color(0xFF8FD0F5),
   ),
   AccentOption(
     key: 'teal',
-    light: Color(0xFF0B7A6B),
-    darkFill: Color(0xFF0B7A6B),
-    darkText: Color(0xFF4CC7B1),
+    light: Color(0xFF1F6F5C),
+    darkFill: Color(0xFF2E8C75),
+    darkText: Color(0xFF7ED8C3),
   ),
   AccentOption(
     key: 'orange',
-    light: Color(0xFFB4530A),
-    darkFill: Color(0xFFB4530A),
-    darkText: Color(0xFFFFA24D),
+    light: Color(0xFFA65A22),
+    darkFill: Color(0xFFC4702E),
+    darkText: Color(0xFFF4B77C),
   ),
   AccentOption(
     key: 'purple',
-    light: Color(0xFF7A3FB5),
-    darkFill: Color(0xFF7A3FB5),
-    darkText: Color(0xFFC89AF0),
+    light: Color(0xFF6B4C8A),
+    darkFill: Color(0xFF8A6AA8),
+    darkText: Color(0xFFD0B8E8),
   ),
   AccentOption(
     key: 'pink',
-    light: Color(0xFFC2185B),
-    darkFill: Color(0xFFC2185B),
-    darkText: Color(0xFFFF8FB1),
+    light: Color(0xFFA33B5C),
+    darkFill: Color(0xFFC25B7A),
+    darkText: Color(0xFFF2A7BB),
   ),
 ];
 
@@ -61,10 +61,10 @@ abstract final class AppColors {
   /// Fixed badge colors picked when creating a subject. Each subject stores
   /// its own color, so these do not follow the theme accent.
   static const subjectBadges = <Color>[
-    Color(0xFF3B4BDB),
-    Color(0xFF0B7A6B),
-    Color(0xFFB4530A),
-    Color(0xFF7A3FB5),
+    Color(0xFF1C5D99),
+    Color(0xFF1F6F5C),
+    Color(0xFFA65A22),
+    Color(0xFF6B4C8A),
   ];
 }
 
@@ -123,51 +123,51 @@ class AppPalette extends ThemeExtension<AppPalette> {
   static AppPalette light(String accentKey) {
     final accent = accentByKey(accentKey);
     return AppPalette(
-      background: const Color(0xFFF4F6FB),
-      card: const Color(0xFFFFFFFF),
-      cardBorder: const Color(0xFFE1E5F0),
-      text: const Color(0xFF14182B),
-      mutedText: const Color(0xFF5B6280),
+      background: const Color(0xFFF6F1E7),
+      card: const Color(0xFFFFFCF6),
+      cardBorder: const Color(0xFFD9D0BF),
+      text: const Color(0xFF1B1A17),
+      mutedText: const Color(0xFF6B665B),
       accent: accent.light,
       accentText: accent.light,
       onAccent: const Color(0xFFFFFFFF),
-      deadlineText: const Color(0xFF9A5B00),
-      deadlineBg: const Color(0xFFFFF1D6),
-      overdue: const Color(0xFFB42318),
-      draftText: const Color(0xFF444B66),
-      draftBg: const Color(0xFFECEEF5),
-      inProgressText: const Color(0xFF2D3AB5),
-      inProgressBg: const Color(0xFFE8EAFD),
-      finalText: const Color(0xFF0B6B5F),
-      finalBg: const Color(0xFFDDF5F0),
-      submittedText: const Color(0xFF2F6B16),
-      submittedBg: const Color(0xFFE4F4DC),
+      deadlineText: const Color(0xFF8A4E00),
+      deadlineBg: const Color(0xFFF3E2C2),
+      overdue: const Color(0xFFA92F24),
+      draftText: const Color(0xFF5A574F),
+      draftBg: const Color(0xFFECE7DC),
+      inProgressText: const Color(0xFF1C5D99),
+      inProgressBg: const Color(0xFFDDE9F2),
+      finalText: const Color(0xFF25624F),
+      finalBg: const Color(0xFFDDEBE3),
+      submittedText: const Color(0xFF4E5A24),
+      submittedBg: const Color(0xFFE7EBD5),
     );
   }
 
   static AppPalette dark(String accentKey) {
     final accent = accentByKey(accentKey);
     return AppPalette(
-      background: const Color(0xFF0F1220),
-      card: const Color(0xFF1A1F33),
-      cardBorder: const Color(0xFF2A3050),
-      text: const Color(0xFFEDEFF8),
-      mutedText: const Color(0xFFA3AACB),
+      background: const Color(0xFF111315),
+      card: const Color(0xFF1A1D20),
+      cardBorder: const Color(0xFF30353A),
+      text: const Color(0xFFF3EEE3),
+      mutedText: const Color(0xFFA8A196),
       accent: accent.darkFill,
       accentText: accent.darkText,
       onAccent: const Color(0xFFFFFFFF),
-      deadlineText: const Color(0xFFF2C879),
-      // The light amber at 20% over the dark background.
-      deadlineBg: const Color(0x33FFF1D6),
-      overdue: const Color(0xFFFF8A7A),
-      draftText: const Color(0xFFC3C9DD),
-      draftBg: const Color(0x33444B66),
-      inProgressText: const Color(0xFF9FA8FF),
-      inProgressBg: const Color(0x332D3AB5),
-      finalText: const Color(0xFF57C9B7),
-      finalBg: const Color(0x330B6B5F),
-      submittedText: const Color(0xFF8ED46C),
-      submittedBg: const Color(0x332F6B16),
+      deadlineText: const Color(0xFFF0C98A),
+      // The warm amber at 20% over the dark background.
+      deadlineBg: const Color(0x33F3E2C2),
+      overdue: const Color(0xFFFF9A8F),
+      draftText: const Color(0xFFC9C3B8),
+      draftBg: const Color(0x335A574F),
+      inProgressText: const Color(0xFF8FD0F5),
+      inProgressBg: const Color(0x331C5D99),
+      finalText: const Color(0xFF7ED8C3),
+      finalBg: const Color(0x3325624F),
+      submittedText: const Color(0xFFC4D18A),
+      submittedBg: const Color(0x334E5A24),
     );
   }
 
@@ -249,10 +249,16 @@ extension PaletteContext on BuildContext {
   AppPalette get palette => Theme.of(this).extension<AppPalette>()!;
 }
 
+/// Campus-editorial design system: warm paper, ink text, serif headings,
+/// monospaced labels, thin rules, and almost no elevation. The logo supplies
+/// the default blue; the other accents are muted to sit on paper.
 abstract final class AppTheme {
-  static const double screenPadding = 20;
-  static const double cardRadius = 14;
-  static const double buttonRadius = 12;
+  static const double screenPadding = 22;
+  static const double cardRadius = 6;
+  static const double buttonRadius = 4;
+
+  static const String serifFamily = 'serif';
+  static const String monoFamily = 'monospace';
 
   static ThemeData light(String accentKey) =>
       _build(AppPalette.light(accentKey), Brightness.light);
@@ -262,29 +268,194 @@ abstract final class AppTheme {
 
   static ThemeData _build(AppPalette palette, Brightness brightness) {
     final base = ThemeData(brightness: brightness, useMaterial3: true);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: palette.accentText,
-      brightness: brightness,
-      primary: palette.accentText,
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: palette.accent,
+          brightness: brightness,
+          primary: palette.accent,
+        ).copyWith(
+          primary: palette.accent,
+          onPrimary: palette.onAccent,
+          secondary: palette.accentText,
+          onSecondary: palette.onAccent,
+          surface: palette.card,
+          onSurface: palette.text,
+          error: palette.overdue,
+          onError: Colors.white,
+          outline: palette.cardBorder,
+        );
+
+    final baseText = base.textTheme.apply(
+      bodyColor: palette.text,
+      displayColor: palette.text,
     );
+
+    TextStyle? asSerif(
+      TextStyle? style, {
+      double? size,
+      FontWeight? weight,
+      double? letterSpacing,
+      double? height,
+    }) => style?.copyWith(
+      fontFamily: serifFamily,
+      fontSize: size,
+      fontWeight: weight,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+
+    TextStyle? asMono(
+      TextStyle? style, {
+      double? size,
+      FontWeight? weight,
+      double? letterSpacing,
+      double? height,
+    }) => style?.copyWith(
+      fontFamily: monoFamily,
+      fontSize: size,
+      fontWeight: weight,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+
+    final textTheme = baseText.copyWith(
+      displayLarge: asSerif(
+        baseText.displayLarge,
+        size: 46,
+        weight: FontWeight.w700,
+        letterSpacing: -1.8,
+        height: 0.98,
+      ),
+      displayMedium: asSerif(
+        baseText.displayMedium,
+        size: 38,
+        weight: FontWeight.w700,
+        letterSpacing: -1.2,
+        height: 1.0,
+      ),
+      displaySmall: asSerif(
+        baseText.displaySmall,
+        size: 32,
+        weight: FontWeight.w700,
+        letterSpacing: -0.8,
+        height: 1.04,
+      ),
+      headlineLarge: asSerif(
+        baseText.headlineLarge,
+        size: 30,
+        weight: FontWeight.w700,
+        letterSpacing: -0.7,
+        height: 1.08,
+      ),
+      headlineMedium: asSerif(
+        baseText.headlineMedium,
+        size: 26,
+        weight: FontWeight.w700,
+        letterSpacing: -0.5,
+        height: 1.12,
+      ),
+      headlineSmall: asSerif(
+        baseText.headlineSmall,
+        size: 23,
+        weight: FontWeight.w700,
+        letterSpacing: -0.3,
+        height: 1.15,
+      ),
+      titleLarge: asSerif(
+        baseText.titleLarge,
+        size: 21,
+        weight: FontWeight.w600,
+        letterSpacing: -0.2,
+      ),
+      titleMedium: asSerif(
+        baseText.titleMedium,
+        size: 17,
+        weight: FontWeight.w600,
+        letterSpacing: -0.1,
+      ),
+      titleSmall: asMono(
+        baseText.titleSmall,
+        size: 11,
+        weight: FontWeight.w600,
+        letterSpacing: 1.1,
+      ),
+      bodyLarge: baseText.bodyLarge?.copyWith(fontSize: 16, height: 1.45),
+      bodyMedium: baseText.bodyMedium?.copyWith(fontSize: 14, height: 1.4),
+      bodySmall: baseText.bodySmall?.copyWith(fontSize: 12.5, height: 1.35),
+      labelLarge: asMono(
+        baseText.labelLarge,
+        size: 12,
+        weight: FontWeight.w600,
+        letterSpacing: 0.45,
+      ),
+      labelMedium: asMono(
+        baseText.labelMedium,
+        size: 11,
+        weight: FontWeight.w600,
+        letterSpacing: 0.9,
+      ),
+      labelSmall: asMono(
+        baseText.labelSmall,
+        size: 10,
+        weight: FontWeight.w600,
+        letterSpacing: 0.9,
+      ),
+    );
+
     return base.copyWith(
       colorScheme: scheme,
       scaffoldBackgroundColor: palette.background,
-      textTheme: base.textTheme.apply(
-        bodyColor: palette.text,
-        displayColor: palette.text,
-      ),
+      textTheme: textTheme,
+      iconTheme: IconThemeData(color: palette.text, size: 22),
       appBarTheme: AppBarTheme(
         backgroundColor: palette.background,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: palette.text,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: textTheme.titleLarge?.copyWith(color: palette.text),
       ),
-      dialogTheme: DialogThemeData(backgroundColor: palette.card),
+      cardTheme: CardThemeData(
+        color: palette.card,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: BorderSide(color: palette.cardBorder),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius + 2),
+          side: BorderSide(color: palette.cardBorder),
+        ),
+        titleTextStyle: textTheme.headlineSmall?.copyWith(color: palette.text),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: palette.mutedText,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: palette.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: palette.accent,
           foregroundColor: palette.onAccent,
+          disabledBackgroundColor: palette.cardBorder,
+          disabledForegroundColor: palette.mutedText,
           minimumSize: const Size(64, 48),
+          elevation: 0,
+          textStyle: textTheme.labelLarge?.copyWith(
+            color: palette.onAccent,
+            letterSpacing: 0.5,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonRadius),
           ),
@@ -292,52 +463,114 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: palette.accentText,
+          foregroundColor: palette.text,
           minimumSize: const Size(64, 44),
+          side: BorderSide(color: palette.cardBorder),
+          textStyle: textTheme.labelLarge?.copyWith(
+            color: palette.text,
+            letterSpacing: 0.4,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonRadius),
           ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: palette.accentText),
+        style: TextButton.styleFrom(
+          foregroundColor: palette.accentText,
+          textStyle: textTheme.labelLarge?.copyWith(
+            color: palette.accentText,
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: palette.card,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(buttonRadius),
+        filled: false,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: palette.mutedText),
+        labelStyle: textTheme.labelMedium?.copyWith(color: palette.mutedText),
+        border: UnderlineInputBorder(
           borderSide: BorderSide(color: palette.cardBorder),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(buttonRadius),
+        enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: palette.cardBorder),
         ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: palette.accentText, width: 2),
+        ),
+        errorBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: palette.overdue),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: palette.card,
+        selectedColor: palette.accent.withValues(alpha: 0.12),
+        disabledColor: palette.card,
+        side: BorderSide(color: palette.cardBorder),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+        labelStyle: textTheme.labelMedium?.copyWith(color: palette.text),
+        secondaryLabelStyle: textTheme.labelMedium?.copyWith(
+          color: palette.accentText,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      ),
+      dividerTheme: DividerThemeData(
+        color: palette.cardBorder,
+        thickness: 1,
+        space: 1,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: palette.accentText,
+        linearTrackColor: palette.cardBorder,
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: palette.accentText,
+        selectionColor: palette.accent.withValues(alpha: 0.22),
+        selectionHandleColor: palette.accent,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: palette.card,
-        indicatorColor: Colors.transparent,
+        backgroundColor: palette.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 68,
+        indicatorColor: palette.accent.withValues(alpha: 0.12),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
         labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => TextStyle(
-            fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w600
-                : FontWeight.normal,
+          (states) => textTheme.labelSmall?.copyWith(
             color: states.contains(WidgetState.selected)
                 ? palette.accentText
                 : palette.mutedText,
+            fontWeight: FontWeight.w600,
           ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
+            size: 22,
             color: states.contains(WidgetState.selected)
                 ? palette.accentText
                 : palette.mutedText,
           ),
         ),
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: palette.mutedText,
+        textColor: palette.text,
+        titleTextStyle: textTheme.titleMedium,
+        subtitleTextStyle: textTheme.bodySmall?.copyWith(
+          color: palette.mutedText,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: palette.text,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: palette.background,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       extensions: [palette],
     );

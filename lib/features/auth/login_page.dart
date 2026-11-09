@@ -4,9 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Screen 1 from AGENTS.md section 14: Log in with an email or a username.
-/// Creating an account lives on its own screen (`/create-account`).
+/// Creating an account lives on its own screen (`/signup`).
+///
+/// Campus-editorial treatment: masthead, logo lockup, serif statement, and a
+/// ruled index-card form instead of a generic Material login card.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -57,89 +61,158 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppTheme.screenPadding),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.screenPadding,
+            18,
+            AppTheme.screenPadding,
+            28,
+          ),
           children: [
-            const SizedBox(height: 48),
-            Text(
-              'SubTrack',
-              style: textTheme.headlineLarge?.copyWith(
-                color: context.palette.accent,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Every subject, every version, safely kept.',
-              style: textTheme.bodyLarge?.copyWith(
-                color: context.palette.mutedText,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // First-time users must see where to go (requested change).
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: context.palette.inProgressBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'First time here? Create an account first — the button at '
-                'the end of this screen.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: context.palette.inProgressText,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text('Email or username', style: textTheme.labelLarge),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _identifierController,
-              autocorrect: false,
-              enableSuggestions: false,
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => _clearError(),
-            ),
-            const SizedBox(height: 16),
-            Text('Password', style: textTheme.labelLarge),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _passwordController,
-              obscureText: !_passwordVisible,
-              onChanged: (_) => _clearError(),
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                suffixIcon: IconButton(
-                  onPressed: () =>
-                      setState(() => _passwordVisible = !_passwordVisible),
-                  icon: Icon(
-                    _passwordVisible ? Icons.visibility_off : Icons.visibility,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SubTrack',
+                        style: textTheme.titleLarge?.copyWith(
+                          color: palette.text,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'STUDENT ARCHIVE / EVERY VERSION',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: palette.mutedText,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                Text(
+                  'EST. 2026',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: palette.mutedText,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const EditorialRule(padding: EdgeInsets.only(top: 14, bottom: 18)),
+            const SubTrackMark(height: 92),
+            const SizedBox(height: 16),
+            Text(
+              'Every subject,\nevery version,\nsafely kept.',
+              style: textTheme.displaySmall?.copyWith(
+                color: palette.text,
+                height: 1.02,
               ),
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: context.palette.overdue)),
-              const SizedBox(height: 8),
-            ],
-            ElevatedButton(
-              onPressed: _busy ? null : _submit,
-              child: Text(_busy ? 'Please wait…' : 'Log in'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _busy ? null : () => context.go('/signup'),
-              child: const Text('Create account'),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              decoration: BoxDecoration(
+                color: palette.card,
+                border: Border.all(color: palette.cardBorder),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SectionLabel('01 / Sign in'),
+                  const SizedBox(height: 14),
+                  Text('Email or username', style: textTheme.labelLarge),
+                  const SizedBox(height: 2),
+                  TextField(
+                    controller: _identifierController,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => _clearError(),
+                  ),
+                  const SizedBox(height: 18),
+                  Text('Password', style: textTheme.labelLarge),
+                  const SizedBox(height: 2),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_passwordVisible,
+                    onChanged: (_) => _clearError(),
+                    onSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _passwordVisible = !_passwordVisible,
+                        ),
+                        icon: Icon(
+                          _passwordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: palette.deadlineBg,
+                        border: Border(
+                          left: BorderSide(color: palette.overdue, width: 3),
+                        ),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: palette.overdue,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  ElevatedButton(
+                    onPressed: _busy ? null : _submit,
+                    child: Text(_busy ? 'Please wait…' : 'Log in'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    onPressed: _busy ? null : () => context.go('/signup'),
+                    child: const Text('Create account'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(
+                color: palette.inProgressBg,
+                border: Border(
+                  left: BorderSide(color: palette.inProgressText, width: 2),
+                ),
+              ),
+              child: Text(
+                'First time here? Create an account first. The button is at '
+                'the end of the form.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: palette.inProgressText,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
               'Sign in once. After that, the app works offline.',
               textAlign: TextAlign.center,
+              style: textTheme.labelSmall?.copyWith(color: palette.mutedText),
             ),
           ],
         ),

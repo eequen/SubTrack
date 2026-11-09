@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Email shape check for the create-account form; Supabase re-checks it.
 final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -100,24 +101,42 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppTheme.screenPadding),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.screenPadding,
+            18,
+            AppTheme.screenPadding,
+            28,
+          ),
           children: [
-            const SizedBox(height: 40),
+            Row(
+              children: [
+                Expanded(child: SubTrackWordmark(height: 22)),
+                Text(
+                  'NEW ACCOUNT / 02',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: context.palette.mutedText,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+            const EditorialRule(padding: EdgeInsets.only(top: 14, bottom: 18)),
             Text(
               'Create account',
               style: textTheme.headlineLarge?.copyWith(
-                color: context.palette.accent,
-                fontWeight: FontWeight.bold,
+                color: context.palette.text,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'It takes a minute. Pick the username you will log in with.',
-              style: textTheme.bodyLarge?.copyWith(
+              style: textTheme.bodyMedium?.copyWith(
                 color: context.palette.mutedText,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
+            const SectionLabel('02 / New account'),
+            const SizedBox(height: 12),
             Text('Display name', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             TextField(
@@ -193,9 +212,23 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(_error!, style: TextStyle(color: context.palette.overdue)),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: context.palette.deadlineBg,
+                  border: Border(
+                    left: BorderSide(color: context.palette.overdue, width: 3),
+                  ),
+                ),
+                child: Text(
+                  _error!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: context.palette.overdue,
+                  ),
+                ),
+              ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             ElevatedButton(
               onPressed: _busy ? null : _submit,
               child: Text(_busy ? 'Please wait…' : 'Create account'),
@@ -205,10 +238,13 @@ class _CreateAccountPageState extends ConsumerState<CreateAccountPage> {
               onPressed: _busy ? null : () => context.go('/login'),
               child: const Text('Back to log in'),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: 18),
+            Text(
               'Sign in once. After that, the app works offline.',
               textAlign: TextAlign.center,
+              style: textTheme.labelSmall?.copyWith(
+                color: context.palette.mutedText,
+              ),
             ),
           ],
         ),

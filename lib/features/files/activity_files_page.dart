@@ -12,6 +12,7 @@ import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Screen 6 from AGENTS.md section 14: files of one activity.
 class ActivityFilesPage extends ConsumerStatefulWidget {
@@ -120,6 +121,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) => _FileCard(
                         item: items[index],
+                        index: index,
                         hasActiveEdit: editing.contains(items[index].file.id),
                         onOpen: () => _open(items[index]),
                       ),
@@ -148,30 +150,35 @@ class _ActivityHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notes = activity.notes.trim();
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SectionLabel('Activity / Files', showRule: false),
+        const SizedBox(height: 2),
         Text(
           activity.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: textTheme.headlineSmall?.copyWith(color: context.palette.text),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 4),
-        Row(
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
           children: [
             StatusChip(status: activity.status),
-            if (activity.deadline != null) ...[
-              const SizedBox(width: 8),
+            if (activity.deadline != null)
               DeadlineChip(deadline: activity.deadline!),
-            ],
           ],
         ),
         if (notes.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text(
             notes,
-            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+            style: textTheme.bodySmall?.copyWith(
+              color: context.palette.mutedText,
+            ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -184,11 +191,13 @@ class _ActivityHeader extends StatelessWidget {
 class _FileCard extends StatelessWidget {
   const _FileCard({
     required this.item,
+    required this.index,
     required this.hasActiveEdit,
     required this.onOpen,
   });
 
   final FileListItem item;
+  final int index;
   final bool hasActiveEdit;
   final VoidCallback onOpen;
 
@@ -197,18 +206,22 @@ class _FileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commit = item.currentCommit;
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                IndexStamp('0${index + 1}', size: 24, color: palette.mutedText),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     item.file.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: textTheme.titleMedium?.copyWith(color: palette.text),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -217,35 +230,37 @@ class _FileCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   const EditingChip(),
                 ],
-                if (commit != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      'v${commit.versionNo}',
-                      style: TextStyle(color: context.palette.mutedText),
+                if (commit != null) ...[
+                  const SizedBox(width: 7),
+                  Text(
+                    'v${commit.versionNo}',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: palette.mutedText,
+                      letterSpacing: 0.2,
                     ),
                   ),
+                ],
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             if (commit != null) ...[
               Text(
                 '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
-                ),
+                style: textTheme.bodySmall?.copyWith(color: palette.mutedText),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              const SizedBox(height: 2),
               Text(
                 formatBytes(commit.sizeBytes),
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
+                style: textTheme.labelSmall?.copyWith(
+                  color: palette.mutedText,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
+            const SizedBox(height: 9),
+            const EditorialRule(),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,

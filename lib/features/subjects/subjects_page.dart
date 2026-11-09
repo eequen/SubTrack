@@ -10,6 +10,7 @@ import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/subjects/subject_dialog.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Screen 4 from AGENTS.md section 14: Subjects.
 class SubjectsPage extends ConsumerWidget {
@@ -43,11 +44,16 @@ class SubjectsPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SectionLabel('Subjects / Index'),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: selectedId == null
-                        ? const Text('My Subjects')
+                        ? Text(
+                            'My Subjects',
+                            style: Theme.of(context).textTheme.headlineLarge,
+                          )
                         : _SemesterHeader(
                             repo: semesterRepo,
                             semesterId: selectedId,
@@ -95,6 +101,8 @@ class _SemesterHeader extends StatelessWidget {
           s == null
               ? 'My Subjects'
               : '${semesterLabel(s.term)} - SY ${s.schoolYear}\nMy Subjects',
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(height: 1.25, color: context.palette.text),
         );
       },
     );
@@ -119,7 +127,8 @@ class _SubjectList extends ConsumerWidget {
         return ListView.separated(
           itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _SubjectCard(item: items[index]),
+          itemBuilder: (context, index) =>
+              _SubjectCard(item: items[index], index: index),
         );
       },
     );
@@ -129,9 +138,10 @@ class _SubjectList extends ConsumerWidget {
 enum _SubjectAction { rename, archive, unarchive, delete }
 
 class _SubjectCard extends ConsumerWidget {
-  const _SubjectCard({required this.item});
+  const _SubjectCard({required this.item, required this.index});
 
   final SubjectListItem item;
+  final int index;
 
   Future<void> _runAction(BuildContext context, WidgetRef ref) async {
     final subject = item.subject;
@@ -211,22 +221,56 @@ class _SubjectCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subject = item.subject;
     final counts = '${item.activityCount} activities - ${item.fileCount} files';
+    final textTheme = Theme.of(context).textTheme;
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Opacity(
         opacity: subject.isArchived ? 0.6 : 1,
-        child: ListTile(
-          leading: SubjectBadge(subject: subject),
-          title: Text(
-            subject.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text(subject.isArchived ? 'Archived · $counts' : counts),
-          trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Subject actions',
-            onPressed: () => _runAction(context, ref),
-          ),
+        child: InkWell(
           onTap: () => context.push('/subjects/${subject.id}/activities'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+            child: Row(
+              children: [
+                IndexStamp(
+                  '0${index + 1}',
+                  size: 24,
+                  color: context.palette.mutedText,
+                ),
+                const SizedBox(width: 8),
+                SubjectBadge(subject: subject),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: context.palette.text,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subject.isArchived ? 'Archived · $counts' : counts,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: context.palette.mutedText,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'Subject actions',
+                  onPressed: () => _runAction(context, ref),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -255,16 +299,19 @@ class _DueSoonCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Due soon',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(color: context.palette.text),
                   ),
+                  const SizedBox(height: 8),
+                  const EditorialRule(),
                   for (final upcoming in items)
                     InkWell(
                       onTap: () =>
                           context.push('/activities/${upcoming.activity.id}'),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
                         child: Row(
                           children: [
                             Expanded(
@@ -275,16 +322,25 @@ class _DueSoonCard extends ConsumerWidget {
                                     upcoming.activity.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontFamily: AppTheme.serifFamily,
+                                          fontSize: 14,
+                                          letterSpacing: 0,
+                                          color: context.palette.text,
+                                        ),
                                   ),
                                   Text(
                                     upcoming.subjectName,
-                                    style: TextStyle(
-                                      color: context.palette.mutedText,
-                                      fontSize: 12,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: context.palette.mutedText,
+                                          letterSpacing: 0.2,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -307,7 +363,7 @@ class _DueSoonCard extends ConsumerWidget {
   }
 }
 
-/// Colored circle with the icon if set, otherwise the name's initials.
+/// Colored square with the icon if set, otherwise the name's initials.
 class SubjectBadge extends StatelessWidget {
   const SubjectBadge({required this.subject, super.key});
 
@@ -330,13 +386,17 @@ class SubjectBadge extends StatelessWidget {
       width: 44,
       height: 44,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
+      ),
       child: Text(
         _label,
         style: const TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
           fontSize: 16,
+          fontFamily: AppTheme.serifFamily,
         ),
       ),
     );

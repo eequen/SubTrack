@@ -79,7 +79,7 @@ void main() {
 
     expect(
       _materialApp(tester).theme!.colorScheme.primary,
-      const Color(0xFFC2185B),
+      const Color(0xFFA33B5C),
     );
     expect((await _profile(db)).accentKey, 'pink');
 

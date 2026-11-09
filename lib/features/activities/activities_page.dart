@@ -12,6 +12,7 @@ import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/editorial.dart';
 
 /// Screen 5 from AGENTS.md section 14: Activities of one subject.
 class ActivitiesPage extends ConsumerStatefulWidget {
@@ -240,6 +241,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) => _ActivityCard(
                         item: filtered[index],
+                        index: index,
                         onAction: _runAction,
                       ),
                     );
@@ -293,16 +295,21 @@ class _SubjectHeader extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SectionLabel('Activities / Index', showRule: false),
+            const SizedBox(height: 2),
             Text(
               subject.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(color: context.palette.text),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             if (countLabel != null)
               Text(
                 countLabel!,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: context.palette.mutedText,
-                  fontSize: 13,
+                  letterSpacing: 0.2,
                 ),
               ),
           ],
@@ -313,9 +320,14 @@ class _SubjectHeader extends StatelessWidget {
 }
 
 class _ActivityCard extends ConsumerWidget {
-  const _ActivityCard({required this.item, required this.onAction});
+  const _ActivityCard({
+    required this.item,
+    required this.index,
+    required this.onAction,
+  });
 
   final ActivityListItem item;
+  final int index;
   final Future<void> Function(Activity activity) onAction;
 
   String get _filesLabel {
@@ -329,50 +341,80 @@ class _ActivityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = item.activity;
+    final textTheme = Theme.of(context).textTheme;
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Opacity(
         opacity: activity.isArchived ? 0.6 : 1,
-        child: ListTile(
-          title: Text(
-            activity.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  StatusChip(status: activity.status),
-                  if (activity.deadline != null) ...[
-                    const SizedBox(width: 8),
-                    DeadlineChip(deadline: activity.deadline!),
-                  ],
-                  if (activity.isArchived) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      'Archived',
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
+        child: InkWell(
+          onTap: () => context.push('/activities/${activity.id}'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 4, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IndexStamp(
+                      '0${index + 1}',
+                      size: 24,
+                      color: context.palette.mutedText,
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        activity.title,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: context.palette.text,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'Activity actions',
+                      onPressed: () => onAction(activity),
+                    ),
                   ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _filesLabel,
-                style: TextStyle(color: context.palette.mutedText),
-              ),
-            ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 2),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          StatusChip(status: activity.status),
+                          if (activity.deadline != null)
+                            DeadlineChip(deadline: activity.deadline!),
+                          if (activity.isArchived)
+                            Text(
+                              'Archived',
+                              style: textTheme.labelSmall?.copyWith(
+                                color: context.palette.mutedText,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _filesLabel,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: context.palette.mutedText,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Activity actions',
-            onPressed: () => onAction(activity),
-          ),
-          onTap: () => context.push('/activities/${activity.id}'),
         ),
       ),
     );

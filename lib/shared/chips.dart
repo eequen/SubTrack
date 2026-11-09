@@ -31,7 +31,37 @@ String statusLabel(String status) {
   }
 }
 
-/// Status pill used on activity cards (mockup 5).
+/// Rubber-stamp style chip used across the editorial cards.
+class _Stamp extends StatelessWidget {
+  const _Stamp({
+    required this.text,
+    required this.textColor,
+    required this.background,
+  });
+
+  final String text;
+  final Color textColor;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        border: Border.all(color: textColor.withValues(alpha: 0.32)),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: textColor, letterSpacing: 0.45, height: 1.1),
+      ),
+    );
+  }
+}
+
+/// Status stamp used on activity cards (mockup 5).
 class StatusChip extends StatelessWidget {
   const StatusChip({required this.status, super.key});
 
@@ -40,63 +70,41 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (text, bg) = statusColors(status, context.palette);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        statusLabel(status),
-        style: TextStyle(color: text, fontSize: 12),
-      ),
-    );
+    return _Stamp(text: statusLabel(status), textColor: text, background: bg);
   }
 }
 
-/// Green "Current" pill (mockups 3 and 7) marking the latest version
+/// Green "Current" stamp (mockups 3 and 7) marking the latest version
 /// or the latest semester.
 class CurrentChip extends StatelessWidget {
   const CurrentChip({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.palette.finalBg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Current',
-        style: TextStyle(color: context.palette.finalText, fontSize: 12),
-      ),
+    return _Stamp(
+      text: 'Current',
+      textColor: context.palette.finalText,
+      background: context.palette.finalBg,
     );
   }
 }
 
-/// Blue-violet "Editing" pill for a file with an unfinished external edit
+/// Blue "Editing" stamp for a file with an unfinished external edit
 /// (AGENTS.md Phase 5B).
 class EditingChip extends StatelessWidget {
   const EditingChip({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.palette.inProgressBg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Editing',
-        style: TextStyle(color: context.palette.inProgressText, fontSize: 12),
-      ),
+    return _Stamp(
+      text: 'Editing',
+      textColor: context.palette.inProgressText,
+      background: context.palette.inProgressBg,
     );
   }
 }
 
-/// Amber deadline pill (mockups 4, 5, 6).
+/// Amber deadline stamp (mockups 4, 5, 6).
 class DeadlineChip extends StatelessWidget {
   const DeadlineChip({required this.deadline, super.key});
 
@@ -106,16 +114,10 @@ class DeadlineChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.palette.deadlineBg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _format.format(deadline),
-        style: TextStyle(color: context.palette.deadlineText, fontSize: 12),
-      ),
+    return _Stamp(
+      text: _format.format(deadline),
+      textColor: context.palette.deadlineText,
+      background: context.palette.deadlineBg,
     );
   }
 }
