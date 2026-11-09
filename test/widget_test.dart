@@ -51,6 +51,12 @@ void main() {
   testWidgets('login screen shows fields and offline note', (tester) async {
     final db = await _pumpApp(tester);
 
+    expect(
+      tester
+          .widget<MaterialApp>(find.byType(MaterialApp))
+          .debugShowCheckedModeBanner,
+      isFalse,
+    );
     expect(find.text('SubTrack'), findsNothing);
     expect(find.text('Username'), findsOneWidget);
     expect(find.byType(BrandLogo), findsNWidgets(2));
