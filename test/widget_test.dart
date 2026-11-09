@@ -7,6 +7,7 @@ import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/brand_logo.dart';
 
 /// The create-account screen is taller than the default widget-test
 /// surface and ListViews do not build offscreen children, so those tests
@@ -51,7 +52,8 @@ void main() {
     final db = await _pumpApp(tester);
 
     expect(find.text('SubTrack'), findsOneWidget);
-    expect(find.text('Email or username'), findsOneWidget);
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.byType(BrandLogo), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Log in'), findsOneWidget);
     expect(

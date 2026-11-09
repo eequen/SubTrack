@@ -8,6 +8,7 @@ class BrandLogo extends StatelessWidget {
     this.height,
     this.width,
     this.alignment = Alignment.center,
+    this.onDarkSurface = false,
     super.key,
   });
 
@@ -15,6 +16,7 @@ class BrandLogo extends StatelessWidget {
     this.height = 64,
     this.width,
     this.alignment = Alignment.center,
+    this.onDarkSurface = false,
     super.key,
   }) : variant = BrandLogoVariant.icon;
 
@@ -22,6 +24,7 @@ class BrandLogo extends StatelessWidget {
     this.height = 28,
     this.width,
     this.alignment = Alignment.center,
+    this.onDarkSurface = false,
     super.key,
   }) : variant = BrandLogoVariant.wordmark;
 
@@ -29,6 +32,7 @@ class BrandLogo extends StatelessWidget {
     this.height = 96,
     this.width,
     this.alignment = Alignment.center,
+    this.onDarkSurface = false,
     super.key,
   }) : variant = BrandLogoVariant.full;
 
@@ -36,10 +40,12 @@ class BrandLogo extends StatelessWidget {
   final double? height;
   final double? width;
   final Alignment alignment;
+  final bool onDarkSurface;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark =
+        onDarkSurface || Theme.of(context).brightness == Brightness.dark;
     final asset = switch (variant) {
       BrandLogoVariant.icon =>
         isDark ? 'assets/brand/mark-light.png' : 'assets/brand/mark.png',
