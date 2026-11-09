@@ -15,6 +15,21 @@ String _dateRange(DateTime start, DateTime end) {
   return '${_rangeFormat.format(start)} - ${_rangeFormat.format(end)}, ${_yearFormat.format(end)}';
 }
 
+Future<void> showSemesterChooser(BuildContext context) async {
+  final createNew = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => SemesterChooserSheet(
+      onSelected: (_) => Navigator.of(sheetContext).pop(false),
+      onCreate: () => Navigator.of(sheetContext).pop(true),
+      onClose: () => Navigator.of(sheetContext).pop(false),
+    ),
+  );
+  if (createNew == true && context.mounted) {
+    context.push('/semesters/new');
+  }
+}
+
 /// Deep-link route for the semester chooser sheet.
 class SemestersPage extends StatelessWidget {
   const SemestersPage({super.key});

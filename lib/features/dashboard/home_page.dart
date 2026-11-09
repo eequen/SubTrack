@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/features/semesters/semesters_page.dart';
 import 'package:subtrack/shared/brand_logo.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 final _dueSoonFormat = DateFormat('MMM d');
 
@@ -36,21 +36,6 @@ bool isOverdue(DateTime? deadline) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   return deadline.isBefore(today);
-}
-
-Future<void> _openSemesterChooser(BuildContext context) async {
-  final createNew = await showModalBottomSheet<bool>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) => SemesterChooserSheet(
-      onSelected: (_) => Navigator.of(sheetContext).pop(false),
-      onCreate: () => Navigator.of(sheetContext).pop(true),
-      onClose: () => Navigator.of(sheetContext).pop(false),
-    ),
-  );
-  if (createNew == true && context.mounted) {
-    context.push('/semesters/new');
-  }
 }
 
 /// Screen 3 and 4 from AGENTS.md section 14: the Home dashboard.
@@ -130,7 +115,7 @@ class HomePage extends ConsumerWidget {
                   _SemesterPill(
                     isNewUser: isNewUser,
                     current: current,
-                    onTap: () => _openSemesterChooser(context),
+                    onTap: () => showSemesterChooser(context),
                   ),
                 ],
               ),
@@ -531,73 +516,30 @@ class _FirstSemesterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => _openSemesterChooser(context),
-        child: CustomPaint(
-          painter: _DashedPainter(
-            color: context.palette.accent.withValues(alpha: 0.6),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            width: double.infinity,
-            child: Column(
-              children: [
-                Icon(Icons.add, color: context.palette.accent),
-                SizedBox(height: 6),
-                Text(
-                  'Add your first semester',
-                  style: TextStyle(
-                    color: context.palette.accent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Group your subjects by term',
-                  style: TextStyle(
-                    color: context.palette.mutedText,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+    return DashedCard(
+      onTap: () => showSemesterChooser(context),
+      borderColor: context.palette.accent.withValues(alpha: 0.6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        width: double.infinity,
+        child: Column(
+          children: [
+            Icon(Icons.add, color: context.palette.accent),
+            const SizedBox(height: 6),
+            Text(
+              'Add your first semester',
+              style: TextStyle(
+                color: context.palette.accent,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+            Text(
+              'Group your subjects by term',
+              style: TextStyle(color: context.palette.mutedText, fontSize: 12),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class _DashedPainter extends CustomPainter {
-  const _DashedPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(AppTheme.cardRadius),
-    );
-    final path = Path()..addRRect(rrect);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = color;
-    const dash = 6.0;
-    const gap = 5.0;
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = math.min(distance + dash, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance += dash + gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedPainter oldDelegate) => color != oldDelegate.color;
 }

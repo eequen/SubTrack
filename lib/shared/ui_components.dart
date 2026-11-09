@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:subtrack/app/theme.dart';
 
@@ -43,6 +45,71 @@ class AppCard extends StatelessWidget {
       child: InkWell(onTap: onTap, child: card),
     );
   }
+}
+
+class DashedCard extends StatelessWidget {
+  const DashedCard({
+    required this.child,
+    required this.onTap,
+    required this.borderColor,
+    this.radius = AppTheme.cardRadius,
+    super.key,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final Color borderColor;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(radius);
+    return Material(
+      color: Colors.transparent,
+      borderRadius: borderRadius,
+      child: InkWell(
+        borderRadius: borderRadius,
+        onTap: onTap,
+        child: CustomPaint(
+          painter: _DashedBorderPainter(color: borderColor, radius: radius),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+      );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = color;
+    const dash = 6.0;
+    const gap = 5.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dash, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
+      color != oldDelegate.color || radius != oldDelegate.radius;
 }
 
 class PrimaryButton extends StatelessWidget {
@@ -141,11 +208,12 @@ class SheetScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.palette.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Material(
+      color: context.palette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
         child: Padding(

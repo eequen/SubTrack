@@ -33,14 +33,15 @@ String statusLabel(String status) {
 
 /// Status pill used on activity cards (mockup 5).
 class StatusChip extends StatelessWidget {
-  const StatusChip({required this.status, super.key});
+  const StatusChip({required this.status, this.onTap, super.key});
 
   final String status;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final (text, bg) = statusColors(status, context.palette);
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
@@ -50,6 +51,23 @@ class StatusChip extends StatelessWidget {
         statusLabel(status),
         style: Theme.of(context).textTheme.labelMedium
             ?.copyWith(color: text, fontWeight: FontWeight.w700),
+      ),
+    );
+    if (onTap == null) return chip;
+    return Semantics(
+      button: true,
+      label: 'Set status: ${statusLabel(status)}',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(99),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(99),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(child: chip),
+          ),
+        ),
       ),
     );
   }

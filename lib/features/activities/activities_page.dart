@@ -12,6 +12,8 @@ import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 5 from AGENTS.md section 14: Activities of one subject.
 class ActivitiesPage extends ConsumerStatefulWidget {
@@ -64,19 +66,20 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
     }
   }
 
-  Future<void> _create() async {
-    final result = await showNewActivityDialog(context);
-    if (result == null) return;
-    await ref
-        .read(activityRepoProvider)
-        .create(
-          subjectId: _subjectId,
-          title: result.title,
-          notes: result.notes,
-          deadline: result.deadline,
-          status: result.status,
-        );
-    await _syncReminders(askPermission: _isFuture(result.deadline));
+  Future<void> _changeStatus(Activity activity) async {
+    final status = await showStatusSheet(
+      context,
+      currentStatus: activity.status,
+    );
+    if (status == null || status == activity.status || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await _syncReminders();
+    } catch (error) {
+      _snack('Could not update status: $error');
+    }
   }
 
   Future<void> _runAction(Activity activity) async {
@@ -241,15 +244,11 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       itemBuilder: (context, index) => _ActivityCard(
                         item: filtered[index],
                         onAction: _runAction,
+                        onStatus: _changeStatus,
                       ),
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _subjectId <= 0 ? null : _create,
-                child: const Text('+ New activity'),
               ),
             ],
           ),
@@ -313,10 +312,15 @@ class _SubjectHeader extends StatelessWidget {
 }
 
 class _ActivityCard extends ConsumerWidget {
-  const _ActivityCard({required this.item, required this.onAction});
+  const _ActivityCard({
+    required this.item,
+    required this.onAction,
+    required this.onStatus,
+  });
 
   final ActivityListItem item;
   final Future<void> Function(Activity activity) onAction;
+  final Future<void> Function(Activity activity) onStatus;
 
   String get _filesLabel {
     final n = item.fileCount;
@@ -329,50 +333,57 @@ class _ActivityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = item.activity;
-    return Card(
-      child: Opacity(
-        opacity: activity.isArchived ? 0.6 : 1,
-        child: ListTile(
-          title: Text(
-            activity.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 6),
-              Row(
+    return Opacity(
+      opacity: activity.isArchived ? 0.65 : 1,
+      child: AppCard(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        onTap: () => context.push('/activities/${activity.id}'),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  StatusChip(status: activity.status),
-                  if (activity.deadline != null) ...[
-                    const SizedBox(width: 8),
-                    DeadlineChip(deadline: activity.deadline!),
-                  ],
-                  if (activity.isArchived) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      'Archived',
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
+                  Text(
+                    activity.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      StatusChip(
+                        status: activity.status,
+                        onTap: () => onStatus(activity),
                       ),
-                    ),
-                  ],
+                      if (activity.deadline != null)
+                        DeadlineChip(deadline: activity.deadline!),
+                      if (activity.isArchived)
+                        Text(
+                          'Archived',
+                          style: TextStyle(
+                            color: context.palette.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _filesLabel,
+                    style: TextStyle(color: context.palette.mutedText),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                _filesLabel,
-                style: TextStyle(color: context.palette.mutedText),
-              ),
-            ],
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Activity actions',
-            onPressed: () => onAction(activity),
-          ),
-          onTap: () => context.push('/activities/${activity.id}'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Activity actions',
+              onPressed: () => onAction(activity),
+            ),
+          ],
         ),
       ),
     );

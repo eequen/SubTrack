@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/activities/all_activities_providers.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 9 from AGENTS.md section 14: every activity in the chosen
 /// semester across all subjects, with filter chips (All, Due soon, and the
@@ -27,6 +32,25 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
       context.pop();
     } else {
       context.go('/home');
+    }
+  }
+
+  Future<void> _changeStatus(Activity activity) async {
+    final status = await showStatusSheet(
+      context,
+      currentStatus: activity.status,
+    );
+    if (status == null || status == activity.status || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await ref.read(reminderServiceProvider).syncAll();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update status: $error')),
+      );
     }
   }
 
@@ -125,8 +149,10 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                             itemCount: filtered.length,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (context, index) =>
-                                _AllActivityCard(item: filtered[index]),
+                            itemBuilder: (context, index) => _AllActivityCard(
+                              item: filtered[index],
+                              onStatus: _changeStatus,
+                            ),
                           );
                         },
                       ),
@@ -182,9 +208,10 @@ class _NoSemesterState extends StatelessWidget {
 }
 
 class _AllActivityCard extends StatelessWidget {
-  const _AllActivityCard({required this.item});
+  const _AllActivityCard({required this.item, required this.onStatus});
 
   final AllActivitiesItem item;
+  final Future<void> Function(Activity activity) onStatus;
 
   String get _filesLabel {
     final n = item.fileCount;
@@ -197,58 +224,54 @@ class _AllActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activity = item.activity;
-    return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.push('/activities/${activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: () => context.push('/activities/${activity.id}'),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activity.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.subjectName,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Text(
-                      activity.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
+                    StatusChip(
+                      status: activity.status,
+                      onTap: () => onStatus(activity),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        StatusChip(status: activity.status),
-                        if (activity.deadline != null) ...[
-                          const SizedBox(width: 8),
-                          DeadlineChip(deadline: activity.deadline!),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _filesLabel,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
+                    if (activity.deadline != null) ...[
+                      const SizedBox(width: 8),
+                      DeadlineChip(deadline: activity.deadline!),
+                    ],
                   ],
                 ),
-              ),
-              Icon(Icons.chevron_right, color: context.palette.mutedText),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  _filesLabel,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right, color: context.palette.mutedText),
+        ],
       ),
     );
   }

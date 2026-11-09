@@ -9,6 +9,8 @@ import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
 
 Future<AppDatabase> _pumpActivities(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
@@ -47,7 +49,7 @@ Future<void> _createActivity(
   required String title,
   String? statusLabel,
 }) async {
-  await tester.tap(find.widgetWithText(ElevatedButton, '+ New activity'));
+  await tester.tap(find.byTooltip('Add'));
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField).first, title);
   if (statusLabel != null) {
@@ -93,7 +95,7 @@ void main() {
   ) async {
     final db = await _pumpActivities(tester);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, '+ New activity'));
+    await tester.tap(find.byTooltip('Add'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
     await tester.pumpAndSettle();
@@ -101,6 +103,25 @@ void main() {
     expect(find.text('Activity title is required.'), findsOneWidget);
     expect(find.text('New activity'), findsOneWidget);
 
+    await db.close();
+    await tester.pump();
+  });
+
+  testWidgets('status chip opens the status sheet and updates immediately', (
+    tester,
+  ) async {
+    final db = await _pumpActivities(tester);
+    await _createActivity(tester, title: 'Lab report');
+
+    await tester.tap(find.byType(StatusChip));
+    await tester.pumpAndSettle();
+    expect(find.text('Set status'), findsOneWidget);
+
+    final sheet = find.byType(StatusSheet);
+    await tester.tap(find.descendant(of: sheet, matching: find.text('Final')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(StatusChip, 'Final'), findsOneWidget);
     await db.close();
     await tester.pump();
   });
