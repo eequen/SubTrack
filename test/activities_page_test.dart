@@ -57,12 +57,21 @@ Future<void> _createActivity(
   }
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField).first, title);
-  if (statusLabel != null) {
-    await tester.tap(find.widgetWithText(ChoiceChip, statusLabel));
-    await tester.pumpAndSettle();
-  }
+  // A new activity always starts as a draft; the status sheet is how the
+  // fixture reaches another status.
   await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
   await tester.pumpAndSettle();
+  if (statusLabel != null) {
+    await tester.tap(find.byType(StatusChip).last);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(StatusSheet),
+        matching: find.text(statusLabel),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
