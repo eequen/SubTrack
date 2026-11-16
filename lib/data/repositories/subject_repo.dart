@@ -37,7 +37,8 @@ class SubjectRepo {
         db.select(db.subjects).join([
             leftOuterJoin(
               db.activities,
-              db.activities.subjectId.equalsExp(db.subjects.id),
+              db.activities.subjectId.equalsExp(db.subjects.id) &
+                  db.activities.kind.equals('activity'),
             ),
             leftOuterJoin(
               db.files,

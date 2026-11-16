@@ -48,15 +48,29 @@ class ActivityRepo {
     'submitted',
   ];
 
+  static const kinds = <String>['activity', 'lesson'];
+  static const activityKind = 'activity';
+  static const lessonKind = 'lesson';
+
   void _checkStatus(String status) {
     if (!statuses.contains(status)) {
       throw ArgumentError('Unknown status: $status');
     }
   }
 
-  Stream<List<Activity>> watchBySubject(int subjectId) {
+  void _checkKind(String kind) {
+    if (!kinds.contains(kind)) {
+      throw ArgumentError('Unknown kind: $kind');
+    }
+  }
+
+  Stream<List<Activity>> watchBySubject(
+    int subjectId, {
+    String kind = activityKind,
+  }) {
+    _checkKind(kind);
     final query = db.select(db.activities)
-      ..where((a) => a.subjectId.equals(subjectId))
+      ..where((a) => a.subjectId.equals(subjectId) & a.kind.equals(kind))
       ..orderBy([(a) => OrderingTerm.desc(a.id)]);
     return query.watch();
   }
@@ -73,8 +87,13 @@ class ActivityRepo {
     )..where((a) => a.id.equals(id))).getSingleOrNull();
   }
 
-  /// Newest first, with file count and highest version number per activity.
-  Stream<List<ActivityListItem>> watchWithCounts(int subjectId) {
+  /// Newest first, with file count and highest version number per folder.
+  /// The default is activities; pass [lessonKind] for the subject's lessons.
+  Stream<List<ActivityListItem>> watchWithCounts(
+    int subjectId, {
+    String kind = activityKind,
+  }) {
+    _checkKind(kind);
     final fileCount = db.files.id.count(distinct: true);
     final latestVersion = db.commits.versionNo.max();
     final query =
@@ -85,7 +104,10 @@ class ActivityRepo {
             ),
             leftOuterJoin(db.commits, db.commits.fileId.equalsExp(db.files.id)),
           ])
-          ..where(db.activities.subjectId.equals(subjectId))
+          ..where(
+            db.activities.subjectId.equals(subjectId) &
+                db.activities.kind.equals(kind),
+          )
           ..addColumns([fileCount, latestVersion])
           ..orderBy([OrderingTerm.desc(db.activities.id)])
           ..groupBy([db.activities.id]);
@@ -119,6 +141,7 @@ class ActivityRepo {
           ])
           ..where(
             db.subjects.semesterId.equals(semesterId) &
+                db.activities.kind.equals(activityKind) &
                 db.activities.isArchived.equals(false) &
                 db.activities.deadline.isNotNull(),
           )
@@ -151,6 +174,7 @@ class ActivityRepo {
           ])
           ..where(
             db.subjects.semesterId.equals(semesterId) &
+                db.activities.kind.equals(activityKind) &
                 db.activities.isArchived.equals(false) &
                 db.activities.deadline.isNotNull() &
                 db.activities.status.isNotIn(const ['submitted']),
@@ -182,6 +206,7 @@ class ActivityRepo {
           ])
           ..where(
             db.subjects.semesterId.equals(semesterId) &
+                db.activities.kind.equals(activityKind) &
                 db.activities.isArchived.equals(false) &
                 db.activities.deadline.isNotNull(),
           )
@@ -211,6 +236,7 @@ class ActivityRepo {
           ])
           ..where(
             db.subjects.semesterId.equals(semesterId) &
+                db.activities.kind.equals(activityKind) &
                 db.activities.isArchived.equals(false),
           )
           ..addColumns([count])
@@ -242,6 +268,7 @@ class ActivityRepo {
           ])
           ..where(
             db.subjects.semesterId.equals(semesterId) &
+                db.activities.kind.equals(activityKind) &
                 db.activities.isArchived.equals(false),
           )
           ..addColumns([fileCount, latestVersion])
@@ -275,14 +302,20 @@ class ActivityRepo {
   Future<int> create({
     required int subjectId,
     required String title,
+    String kind = activityKind,
     String notes = '',
     DateTime? deadline,
     String status = 'draft',
   }) async {
     final trimmed = title.trim();
     if (trimmed.isEmpty) {
-      throw ArgumentError('Activity title is required.');
+      throw ArgumentError(
+        kind == lessonKind
+            ? 'Lesson title is required.'
+            : 'Activity title is required.',
+      );
     }
+    _checkKind(kind);
     _checkStatus(status);
     return db
         .into(db.activities)
@@ -290,9 +323,10 @@ class ActivityRepo {
           ActivitiesCompanion.insert(
             subjectId: subjectId,
             title: trimmed,
+            kind: Value(kind),
             notes: Value(notes.trim()),
-            deadline: Value(deadline),
-            status: Value(status),
+            deadline: Value(kind == lessonKind ? null : deadline),
+            status: Value(kind == lessonKind ? 'draft' : status),
           ),
         );
   }

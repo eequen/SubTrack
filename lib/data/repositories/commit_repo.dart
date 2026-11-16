@@ -82,9 +82,15 @@ class CommitRepo {
       await (db.update(db.files)..where((f) => f.id.equals(fileId))).write(
         FilesCompanion(currentCommitId: Value(id)),
       );
-      await (db.update(db.activities)
-            ..where((a) => a.id.equals(file.activityId)))
-          .write(const ActivitiesCompanion(status: Value('in_progress')));
+      // Lessons reuse activities as folders but have no status workflow.
+      final activity = await (db.select(
+        db.activities,
+      )..where((a) => a.id.equals(file.activityId))).getSingleOrNull();
+      if (activity?.kind == 'activity') {
+        await (db.update(db.activities)
+              ..where((a) => a.id.equals(file.activityId)))
+            .write(const ActivitiesCompanion(status: Value('in_progress')));
+      }
       return id;
     });
   }

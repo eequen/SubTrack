@@ -160,6 +160,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
           'Semesters: ${contents.semesters} · '
           'Subjects: ${contents.subjects} · '
           'Activities: ${contents.activities} · '
+          'Lessons: ${contents.lessons} · '
           'Versions: ${contents.commits}\n\n'
           'This cannot be undone.',
         ),
@@ -260,7 +261,9 @@ class _CloudPageState extends ConsumerState<CloudPage> {
             'Semesters: ${contents.semesters} · '
             'Subjects: ${contents.subjects} · '
             'Activities: ${contents.activities} · '
+            'Lessons: ${contents.lessons} · '
             'Versions: ${contents.commits} · '
+            'Decks: ${contents.decks} (${contents.cards} cards) · '
             'Calendar events: ${contents.calendarEvents}\n\n'
             'This cannot be undone.',
           ),
@@ -510,8 +513,9 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Copies every subject, activity, file, and version '
-                        'into one .zip you can keep anywhere.',
+                        'Copies every subject, lesson, activity, flashcard '
+                        'deck, file, and version into one .zip you can keep '
+                        'anywhere.',
                         style: TextStyle(color: context.palette.mutedText),
                       ),
                       const SizedBox(height: 12),

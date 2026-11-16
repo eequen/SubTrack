@@ -34,6 +34,7 @@ create table public.activities (
   id bigint not null,
   subject_id bigint not null,
   title text not null,
+  kind text not null default 'activity',
   notes text not null default '',
   deadline timestamptz,
   status text not null default 'draft',

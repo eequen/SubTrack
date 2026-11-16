@@ -18,15 +18,21 @@ class BackupContents {
     required this.activities,
     required this.files,
     required this.commits,
+    this.lessons = 0,
     this.calendarEvents = 0,
+    this.decks = 0,
+    this.cards = 0,
   });
 
   final int semesters;
   final int subjects;
   final int activities;
+  final int lessons;
   final int files;
   final int commits;
   final int calendarEvents;
+  final int decks;
+  final int cards;
 }
 
 /// The picked file is not a SubTrack backup, or it is damaged.
@@ -50,6 +56,8 @@ class _BackupPlan {
     required this.files,
     required this.commits,
     required this.calendarEvents,
+    required this.decks,
+    required this.cards,
   });
 
   final Map<String, ArchiveFile> entries;
@@ -60,6 +68,8 @@ class _BackupPlan {
   final List<DbFile> files;
   final List<Commit> commits;
   final List<CalendarEvent> calendarEvents;
+  final List<Deck> decks;
+  final List<DbCard> cards;
 }
 
 /// Local backup: the whole database plus every blob as one .zip
@@ -144,6 +154,8 @@ class BackupRepo {
 
     // Replace rows in one transaction, children before parents.
     await db.transaction(() async {
+      await db.delete(db.cards).go();
+      await db.delete(db.decks).go();
       await db.delete(db.commits).go();
       await db.delete(db.files).go();
       await db.delete(db.activities).go();
@@ -159,6 +171,9 @@ class BackupRepo {
       for (final subject in plan.subjects) {
         await db.into(db.subjects).insert(subject.toCompanion(true));
       }
+      for (final deck in plan.decks) {
+        await db.into(db.decks).insert(deck.toCompanion(true));
+      }
       for (final activity in plan.activities) {
         await db.into(db.activities).insert(activity.toCompanion(true));
       }
@@ -167,6 +182,9 @@ class BackupRepo {
       }
       for (final commit in plan.commits) {
         await db.into(db.commits).insert(commit.toCompanion(true));
+      }
+      for (final card in plan.cards) {
+        await db.into(db.cards).insert(card.toCompanion(true));
       }
     });
   }
@@ -198,6 +216,8 @@ class BackupRepo {
       final List<DbFile> files;
       final List<Commit> commits;
       final List<CalendarEvent> calendarEvents;
+      final List<Deck> decks;
+      final List<DbCard> cards;
       try {
         semesters = await backupDb.select(backupDb.semesters).get();
         calendarEvents = await backupDb.select(backupDb.calendarEvents).get();
@@ -205,6 +225,8 @@ class BackupRepo {
         activities = await backupDb.select(backupDb.activities).get();
         files = await backupDb.select(backupDb.files).get();
         commits = await backupDb.select(backupDb.commits).get();
+        decks = await backupDb.select(backupDb.decks).get();
+        cards = await backupDb.select(backupDb.cards).get();
       } on Exception {
         throw const InvalidBackupException('This backup could not be read.');
       }
@@ -226,10 +248,17 @@ class BackupRepo {
         contents: BackupContents(
           semesters: semesters.length,
           subjects: subjects.length,
-          activities: activities.length,
+          activities: activities
+              .where((activity) => activity.kind == 'activity')
+              .length,
+          lessons: activities
+              .where((activity) => activity.kind == 'lesson')
+              .length,
           files: files.length,
           commits: commits.length,
           calendarEvents: calendarEvents.length,
+          decks: decks.length,
+          cards: cards.length,
         ),
         semesters: semesters,
         subjects: subjects,
@@ -237,6 +266,8 @@ class BackupRepo {
         files: files,
         commits: commits,
         calendarEvents: calendarEvents,
+        decks: decks,
+        cards: cards,
       );
     } finally {
       await backupDb.close();
