@@ -59,6 +59,12 @@ class CommitRepo {
       throw ArgumentError('Unknown commit kind: $kind');
     }
     return db.transaction(() async {
+      // Any saved version means the activity is being worked on. Final and
+      // submitted are explicit outcomes chosen from the finish sheet, so a
+      // later upload/edit/restore moves the activity back to in progress.
+      final file = await (db.select(
+        db.files,
+      )..where((f) => f.id.equals(fileId))).getSingle();
       final id = await db
           .into(db.commits)
           .insert(
@@ -76,6 +82,9 @@ class CommitRepo {
       await (db.update(db.files)..where((f) => f.id.equals(fileId))).write(
         FilesCompanion(currentCommitId: Value(id)),
       );
+      await (db.update(db.activities)
+            ..where((a) => a.id.equals(file.activityId)))
+          .write(const ActivitiesCompanion(status: Value('in_progress')));
       return id;
     });
   }

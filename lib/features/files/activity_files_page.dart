@@ -16,6 +16,7 @@ import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/finish_version_sheet.dart';
 import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 6 from AGENTS.md section 14: files of one activity.
@@ -63,17 +64,39 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _setStatus(Activity activity, String status) async {
-    if (activity.status == status) return;
+  Future<bool> _setStatus(Activity activity, String status) async {
+    if (activity.status == status) return true;
     try {
       await ref
           .read(activityRepoProvider)
           .updateDetails(id: activity.id, status: status);
       await ref.read(localBackupPendingProvider.notifier).markPending();
       await ref.read(reminderServiceProvider).syncAll();
+      return true;
     } catch (error) {
       _snack('Could not update status: $error');
+      return false;
     }
+  }
+
+  Future<void> _finish(FileListItem item) async {
+    final commit = item.currentCommit;
+    final activity = ref.read(activityProvider(_activityId)).value;
+    if (commit == null || activity == null) return;
+
+    final result = await showFinishVersionSheet(
+      context,
+      versionNo: commit.versionNo,
+      fileName: item.file.displayName,
+      currentStatus: activity.status,
+    );
+    if (result == null || !mounted) return;
+    if (!await _setStatus(activity, result)) return;
+    _snack(
+      result == finishVersionSubmitted
+          ? 'v${commit.versionNo} saved and submitted.'
+          : 'v${commit.versionNo} saved as final.',
+    );
   }
 
   Future<void> _open(FileListItem item) async {
@@ -166,6 +189,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                         item: items[index],
                         hasActiveEdit: editing.contains(items[index].file.id),
                         onOpen: () => _open(items[index]),
+                        onFinish: () => _finish(items[index]),
                       ),
                     );
                   },
@@ -261,11 +285,13 @@ class _FileCard extends StatelessWidget {
     required this.item,
     required this.hasActiveEdit,
     required this.onOpen,
+    required this.onFinish,
   });
 
   final FileListItem item;
   final bool hasActiveEdit;
   final VoidCallback onOpen;
+  final VoidCallback onFinish;
 
   static final _dateFormat = DateFormat('MMM d, h:mm a');
 
@@ -331,6 +357,10 @@ class _FileCard extends StatelessWidget {
               CardButton(
                 label: 'Commit',
                 onPressed: () => context.push('/files/${item.file.id}/commit'),
+              ),
+              CardButton(
+                label: 'Finish',
+                onPressed: commit == null ? null : onFinish,
               ),
             ],
           ),

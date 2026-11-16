@@ -10,6 +10,7 @@ import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/core/hashing.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/commit_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
@@ -202,6 +203,11 @@ void main() {
       expect(item!.file.currentCommitId, v2.id);
       // Original v1 is untouched.
       expect(commits.last.message, 'Initial version');
+      // Saving a new version moves the activity to in progress.
+      final activity = await ActivityRepo(setup.db)
+          .watchById(setup.activityId)
+          .first;
+      expect(activity?.status, 'in_progress');
     });
 
     await closeDatabase(tester, setup.db);

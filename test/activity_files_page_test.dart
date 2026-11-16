@@ -17,6 +17,7 @@ import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/finish_version_sheet.dart';
 import 'package:subtrack/shared/ui_components.dart';
 
 class _Setup {
@@ -74,6 +75,10 @@ Future<_Setup> _setup(WidgetTester tester, {bool withFile = true}) async {
         bytes: Uint8List.fromList('hello world'.codeUnits),
         displayName: 'lab1.txt',
       );
+      // Seeding a file commits it and moves the activity to in progress;
+      // this fixture specifically wants a final activity with a file.
+      await (db.update(db.activities)..where((a) => a.id.equals(activityId)))
+          .write(const ActivitiesCompanion(status: Value('final')));
     }
     await prefs.setInt('selected_semester:maria@school.edu', semesterId);
 
@@ -156,6 +161,27 @@ void main() {
     final setup = await _setup(tester, withFile: false);
 
     await tester.tap(find.text('Submitted'));
+    await tester.pumpAndSettle();
+
+    final activity = await tester.runAsync(
+      () => ActivityRepo(setup.db).watchById(setup.activityId).first,
+    );
+    expect(activity?.status, 'submitted');
+
+    await setup.db.close();
+    await tester.pump();
+  });
+
+  testWidgets('finish sheet saves the current version as submitted', (
+    tester,
+  ) async {
+    final setup = await _setup(tester);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Finish'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save v1'), findsOneWidget);
+
+    await tester.drag(find.byKey(finishVersionKnobKey), const Offset(0, -90));
     await tester.pumpAndSettle();
 
     final activity = await tester.runAsync(

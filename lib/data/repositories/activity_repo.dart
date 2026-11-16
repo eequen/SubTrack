@@ -67,6 +67,12 @@ class ActivityRepo {
     )..where((a) => a.id.equals(id))).watchSingleOrNull();
   }
 
+  Future<Activity?> getById(int id) {
+    return (db.select(
+      db.activities,
+    )..where((a) => a.id.equals(id))).getSingleOrNull();
+  }
+
   /// Newest first, with file count and highest version number per activity.
   Stream<List<ActivityListItem>> watchWithCounts(int subjectId) {
     final fileCount = db.files.id.count(distinct: true);
