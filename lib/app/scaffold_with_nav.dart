@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:subtrack/app/menu_sheet.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
 
-/// Bottom navigation shell for Cloud, Subjects, Home, Calendar, and Profile.
+/// Bottom navigation for Home, the centre Menu button, and Cloud.
+///
+/// The menu button is an action rather than a fifth destination: it opens a
+/// sheet with Subjects, Calendar, Profile, Flashcards, and File manager.
 class ScaffoldWithNav extends ConsumerWidget {
   const ScaffoldWithNav({required this.navigationShell, super.key});
 
@@ -25,6 +29,7 @@ class ScaffoldWithNav extends ConsumerWidget {
     ref.watch(editSessionCleanupProvider);
     final hasSemester = ref.watch(selectedSemesterProvider) != null;
     final backupPending = ref.watch(localBackupPendingProvider);
+    final index = navigationShell.currentIndex;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Column(
@@ -72,51 +77,11 @@ class ScaffoldWithNav extends ConsumerWidget {
                 ),
               ),
             ),
-          NavigationBar(
-            selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: (index) {
-              if (!hasSemester && (index == 1 || index == 3)) return;
-              _goBranch(index);
-            },
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.cloud_outlined),
-                selectedIcon: Icon(Icons.cloud),
-                label: 'Cloud',
-              ),
-              NavigationDestination(
-                icon: Opacity(
-                  opacity: hasSemester ? 1 : 0.4,
-                  child: const Icon(Icons.menu_book_outlined),
-                ),
-                selectedIcon: Opacity(
-                  opacity: hasSemester ? 1 : 0.4,
-                  child: const Icon(Icons.menu_book),
-                ),
-                label: 'Subjects',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Opacity(
-                  opacity: hasSemester ? 1 : 0.4,
-                  child: const Icon(Icons.calendar_month_outlined),
-                ),
-                selectedIcon: Opacity(
-                  opacity: hasSemester ? 1 : 0.4,
-                  child: const Icon(Icons.calendar_month),
-                ),
-                label: 'Calendar',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
+          _BottomBar(
+            currentIndex: index,
+            onHome: () => _goBranch(0),
+            onCloud: () => _goBranch(2),
+            onMenu: () => showAppMenu(context, hasSemester: hasSemester),
           ),
         ],
       ),
@@ -124,75 +89,198 @@ class ScaffoldWithNav extends ConsumerWidget {
   }
 }
 
-/// A quick-access tile on the Home dashboard (icons for Semesters,
-/// Subjects, Activities, Calendar). Highlighted with a ring and the
-/// "Start here" label in the new-user state.
-class QuickAccessTile extends StatelessWidget {
-  const QuickAccessTile({
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({
+    required this.currentIndex,
+    required this.onHome,
+    required this.onCloud,
+    required this.onMenu,
+  });
+
+  final int currentIndex;
+  final VoidCallback onHome;
+  final VoidCallback onCloud;
+  final VoidCallback onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border(top: BorderSide(color: palette.cardBorder)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 86,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _NavButton(
+                  key: const Key('nav-home'),
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'Home',
+                  selected: currentIndex == 0,
+                  onTap: onHome,
+                ),
+              ),
+              SizedBox(
+                width: 104,
+                child: _MenuButton(
+                  key: const Key('nav-menu'),
+                  selected: currentIndex == 1,
+                  onTap: onMenu,
+                ),
+              ),
+              Expanded(
+                child: _NavButton(
+                  key: const Key('nav-cloud'),
+                  icon: Icons.cloud_outlined,
+                  selectedIcon: Icons.cloud_rounded,
+                  label: 'Cloud',
+                  selected: currentIndex == 2,
+                  onTap: onCloud,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
     required this.icon,
+    required this.selectedIcon,
     required this.label,
+    required this.selected,
     required this.onTap,
-    this.highlighted = false,
-    this.enabled = true,
     super.key,
   });
 
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
+  final bool selected;
   final VoidCallback onTap;
-  final bool highlighted;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    final decoration = BoxDecoration(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      border: Border.all(
-        color: highlighted
-            ? context.palette.accent
-            : context.palette.cardBorder,
-        width: highlighted ? 2 : 1,
-      ),
-    );
-
-    Widget tile = Container(
-      decoration: decoration,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: highlighted ? context.palette.accent : context.palette.text,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: context.palette.text),
-          ),
-          if (highlighted) ...[
-            const SizedBox(height: 2),
-            Text(
-              'Start here',
-              style: TextStyle(fontSize: 11, color: context.palette.accent),
-            ),
-          ],
-        ],
-      ),
-    );
-
-    if (!enabled) {
-      tile = Opacity(opacity: 0.45, child: tile);
-      return IgnorePointer(child: tile);
-    }
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+    final palette = context.palette;
+    final color = selected ? palette.accentText : palette.mutedText;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        child: tile,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10, bottom: 6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? palette.accent.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Icon(
+                  selected ? selectedIcon : icon,
+                  color: color,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuButton extends StatelessWidget {
+  const _MenuButton({required this.selected, required this.onTap, super.key});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Menu',
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected
+                      ? palette.accentText.withValues(alpha: 0.65)
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Material(
+                color: palette.accent,
+                elevation: 5,
+                shadowColor: palette.accent.withValues(alpha: 0.35),
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Icon(
+                    Icons.menu_rounded,
+                    color: palette.onAccent,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Menu',
+              style: TextStyle(
+                color: selected ? palette.accentText : palette.mutedText,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

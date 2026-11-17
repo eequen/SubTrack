@@ -10,6 +10,13 @@ import 'package:subtrack/features/dashboard/calendar_page.dart';
 import 'package:subtrack/features/dashboard/home_page.dart';
 import 'package:subtrack/features/edit/edit_page.dart';
 import 'package:subtrack/features/files/activity_files_page.dart';
+import 'package:subtrack/features/files/file_manager_page.dart';
+import 'package:subtrack/features/files/subject_file_manager_page.dart';
+import 'package:subtrack/features/flashcards/deck_detail_page.dart';
+import 'package:subtrack/features/flashcards/flashcard_import_page.dart';
+import 'package:subtrack/features/flashcards/flashcard_preview_page.dart';
+import 'package:subtrack/features/flashcards/flashcards_page.dart';
+import 'package:subtrack/features/flashcards/study_page.dart';
 import 'package:subtrack/features/history/commit_page.dart';
 import 'package:subtrack/features/history/version_history_page.dart';
 import 'package:subtrack/features/profile/edit_profile_page.dart';
@@ -26,11 +33,13 @@ import 'package:subtrack/features/subjects/subjects_page.dart';
 /// auth screen go to `/home`. The router is rebuilt by [routerProvider]
 /// whenever the auth state changes, so no refreshListenable is needed.
 ///
-/// - Cloud, Subjects, Home, Calendar, and Profile occupy the five tabs.
-/// - Home owns Search and All activities.
-/// - Subjects owns its activity, file, and history screens.
-/// - Login, signup, the semester chooser, commit, and (later) edit-profile
-///   live outside the shell: no bottom bar there.
+/// The bottom bar has Home, the centre Menu button, and Cloud. Everything
+/// opened from the menu (subjects, calendar, profile, flashcards, and the
+/// file manager) lives in the menu branch, so Home and Cloud keep their
+/// state while the student moves around.
+///
+/// Login, signup, the semester chooser, commit, edit, AI import, and preview
+/// live outside the shell: no bottom bar there.
 GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation ?? '/login',
@@ -91,58 +100,32 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
         pageBuilder: (context, state) =>
             _animatedPage(state, const EditProfilePage()),
       ),
+      // AI import is a focused task, so it hides the bottom bar. The preview
+      // receives its validated cards through `extra`.
+      GoRoute(
+        path: '/flashcards/import',
+        pageBuilder: (context, state) => _animatedPage(
+          state,
+          FlashcardImportPage(subjectId: state.uri.queryParameters['subject']),
+        ),
+      ),
+      GoRoute(
+        path: '/flashcards/preview',
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          return _animatedPage(
+            state,
+            FlashcardPreviewPage(
+              args: extra is FlashcardPreviewArgs ? extra : null,
+            ),
+          );
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             ScaffoldWithNav(navigationShell: navigationShell),
         branches: [
-          // Branch 0: Cloud backup.
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/cloud',
-                pageBuilder: (context, state) =>
-                    _animatedPage(state, const CloudPage()),
-              ),
-            ],
-          ),
-          // Branch 1: Subjects and the screens nested below them.
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/subjects',
-                pageBuilder: (context, state) =>
-                    _animatedPage(state, const SubjectsPage()),
-              ),
-              GoRoute(
-                path: '/subjects/:subjectId/activities',
-                pageBuilder: (context, state) => _animatedPage(
-                  state,
-                  ActivitiesPage(
-                    subjectId: state.pathParameters['subjectId'] ?? '',
-                  ),
-                ),
-              ),
-              GoRoute(
-                path: '/activities/:activityId',
-                pageBuilder: (context, state) => _animatedPage(
-                  state,
-                  ActivityFilesPage(
-                    activityId: state.pathParameters['activityId'] ?? '',
-                  ),
-                ),
-              ),
-              GoRoute(
-                path: '/files/:fileId/history',
-                pageBuilder: (context, state) => _animatedPage(
-                  state,
-                  VersionHistoryPage(
-                    fileId: state.pathParameters['fileId'] ?? '',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Branch 2: Home, Search, and All activities.
+          // Branch 0: Home, Search, and All activities.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -168,23 +151,94 @@ GoRouter buildRouter({bool isSignedIn = false, String? initialLocation}) {
               ),
             ],
           ),
-          // Branch 3: Calendar.
+          // Branch 1: the menu's screens. The centre button opens the menu
+          // sheet; these routes keep the shell so navigation stays put.
           StatefulShellBranch(
             routes: [
+              GoRoute(
+                path: '/subjects',
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const SubjectsPage()),
+              ),
+              GoRoute(
+                path: '/subjects/:subjectId/activities',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  ActivitiesPage(
+                    subjectId: state.pathParameters['subjectId'] ?? '',
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/subjects/:subjectId/files',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  SubjectFileManagerPage(
+                    subjectId: state.pathParameters['subjectId'] ?? '',
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/activities/:activityId',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  ActivityFilesPage(
+                    activityId: state.pathParameters['activityId'] ?? '',
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/files/:fileId/history',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  VersionHistoryPage(
+                    fileId: state.pathParameters['fileId'] ?? '',
+                  ),
+                ),
+              ),
               GoRoute(
                 path: '/calendar',
                 pageBuilder: (context, state) =>
                     _animatedPage(state, const CalendarPage()),
               ),
-            ],
-          ),
-          // Branch 4: Profile.
-          StatefulShellBranch(
-            routes: [
               GoRoute(
                 path: '/profile',
                 pageBuilder: (context, state) =>
                     _animatedPage(state, const ProfilePage()),
+              ),
+              GoRoute(
+                path: '/flashcards',
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const FlashcardsPage()),
+              ),
+              GoRoute(
+                path: '/decks/:deckId',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  DeckDetailPage(deckId: state.pathParameters['deckId'] ?? ''),
+                ),
+              ),
+              GoRoute(
+                path: '/decks/:deckId/study',
+                pageBuilder: (context, state) => _animatedPage(
+                  state,
+                  StudyPage(deckId: state.pathParameters['deckId'] ?? ''),
+                ),
+              ),
+              GoRoute(
+                path: '/file-manager',
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const FileManagerPage()),
+              ),
+            ],
+          ),
+          // Branch 2: Cloud backup.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/cloud',
+                pageBuilder: (context, state) =>
+                    _animatedPage(state, const CloudPage()),
               ),
             ],
           ),

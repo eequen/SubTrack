@@ -125,25 +125,24 @@ void main() {
       expect(find.text('No semester yet'), findsOneWidget);
       expect(find.text('Add your first semester'), findsOneWidget);
       expect(find.text('Quick access'), findsNothing);
-      expect(
-        tester
-            .widgetList<NavigationDestination>(
-              find.byType(NavigationDestination),
-            )
-            .map((destination) => destination.label)
-            .toList(),
-        ['Cloud', 'Subjects', 'Home', 'Calendar', 'Profile'],
-      );
+      // Home, the centre Menu button, and Cloud are the only bar entries.
+      expect(find.byKey(const Key('nav-home')), findsOneWidget);
+      expect(find.byKey(const Key('nav-menu')), findsOneWidget);
+      expect(find.byKey(const Key('nav-cloud')), findsOneWidget);
+      expect(find.text('Subjects'), findsNothing);
       await tester.tap(find.text('Add your first semester'));
       await tester.pumpAndSettle();
       expect(find.text('Choose semester'), findsOneWidget);
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
 
-      // The Subjects tab stays visible but is disabled until a semester exists.
+      // Menu items that need a semester are disabled until one exists.
+      await tester.tap(find.byKey(const Key('nav-menu')));
+      await tester.pumpAndSettle();
       expect(find.text('Subjects'), findsOneWidget);
+      expect(find.text('Choose a semester first'), findsWidgets);
       await tester.tap(find.text('Subjects'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Welcome,'), findsOneWidget);
       await db.close();
     },
@@ -183,7 +182,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Choose semester'), findsNothing);
     expect(find.text('2nd Semester - SY 2026-2027'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
     await db.close();
   });
 
@@ -341,7 +340,7 @@ void main() {
     // the route lives in the home branch of the navigation shell.
     expect(find.text('Sample Essay'), findsOneWidget);
     expect(find.text('No files yet.'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
     await prepared.db.close();
     await tester.pump();
   });

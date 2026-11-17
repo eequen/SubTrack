@@ -51,7 +51,7 @@ void main() {
     final db = await _pumpApp(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Profile'), findsNWidgets(2)); // title + nav tab label
+    expect(find.text('Profile'), findsOneWidget); // screen title
     expect(find.text('@kent@gmail.com'), findsOneWidget);
     expect(find.text('APPEARANCE'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
@@ -86,22 +86,14 @@ void main() {
     await closeDatabase(tester, db);
   });
 
-  testWidgets('Profile cloud shortcut selects the Cloud navigation tab', (
-    tester,
-  ) async {
+  testWidgets('Profile cloud shortcut opens the Cloud screen', (tester) async {
     final db = await _pumpApp(tester);
-    expect(
-      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
-      4,
-    );
 
     await tester.tap(find.text('Cloud backup and restore'));
     await tester.pumpAndSettle();
 
-    expect(
-      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
-      0,
-    );
+    expect(find.text('Cloud backup'), findsOneWidget);
+    expect(find.text('Cloud backup and restore'), findsNothing);
     await closeDatabase(tester, db);
   });
 

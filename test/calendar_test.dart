@@ -224,7 +224,7 @@ void main() {
     expect(find.byKey(ValueKey(calendarDayKey(thisMonthDay))), findsOneWidget);
     expect(find.byKey(calendarMarkerKey(thisMonthDay)), findsOneWidget);
     expect(find.byKey(calendarMarkerKey(nextMonthDay)), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
 
     // A chosen day lists only that day's activity, with its subject and
     // status; archived activities never show.
