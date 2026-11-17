@@ -1,7 +1,9 @@
-# Automatic flashcards via an external AI (proposal)
+# Automatic flashcards via an external AI
 
-**Status:** proposal only — not implemented, no schema change, no new dependency.
-Do not build before the Phase 6 checkpoint and team sign-off (see section 13).
+**Status:** implemented on `feature/ui-redesign` (manual decks, study mode,
+import with preview). Decks and cards are local-only: included in the local
+`.zip` backup, excluded from cloud backup (section 10). The prompt text ships
+as a Dart constant identical to `docs/prompts/flashcards_v1.txt`.
 
 ---
 
