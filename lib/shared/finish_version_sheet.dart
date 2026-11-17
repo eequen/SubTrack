@@ -108,146 +108,150 @@ class _FinishVersionSheetState extends State<FinishVersionSheet> {
         onPressed: () => Navigator.of(context).pop(),
         icon: const Icon(Icons.close),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.fileName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Your version is already saved. Choose how to close this work.',
-            style: TextStyle(color: palette.mutedText, fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          Row(
+      child: Flexible(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Now: ',
+                widget.fileName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Your version is already saved. Choose how to close this work.',
                 style: TextStyle(color: palette.mutedText, fontSize: 13),
               ),
-              StatusChip(status: widget.currentStatus),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: _onDragStart,
-              onVerticalDragUpdate: _onDragUpdate,
-              onVerticalDragEnd: _onDragEnd,
-              child: Stack(
-                alignment: Alignment.center,
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  Container(
-                    width: 2,
-                    height: 168,
-                    decoration: BoxDecoration(
-                      color: palette.cardBorder,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
+                  Text(
+                    'Now: ',
+                    style: TextStyle(color: palette.mutedText, fontSize: 13),
                   ),
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: _FinishTarget(
-                      label: 'Save & submit',
-                      caption: 'Slide up',
-                      icon: Icons.upload_rounded,
-                      foreground: submitText,
-                      background: submitBg,
-                      active: _towardsSubmit,
-                      onTap: () => _finish(finishVersionSubmitted),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: _FinishTarget(
-                      label: 'Save as final',
-                      caption: 'Slide down',
-                      icon: Icons.download_rounded,
-                      foreground: finalText,
-                      background: finalBg,
-                      active: _towardsFinal,
-                      onTap: () => _finish(finishVersionFinal),
-                    ),
-                  ),
-                  AnimatedContainer(
-                    duration: _dragging
-                        ? Duration.zero
-                        : const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    transform: Matrix4.translationValues(0, _drag, 0),
-                    child: Container(
-                      key: finishVersionKnobKey,
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: _towardsSubmit
-                            ? submitBg
-                            : _towardsFinal
-                            ? finalBg
-                            : palette.card,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _towardsSubmit
-                              ? submitText
-                              : _towardsFinal
-                              ? finalText
-                              : palette.accent,
-                          width: 2,
+                  StatusChip(status: widget.currentStatus),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 200,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragStart: _onDragStart,
+                  onVerticalDragUpdate: _onDragUpdate,
+                  onVerticalDragEnd: _onDragEnd,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 2,
+                        height: 168,
+                        decoration: BoxDecoration(
+                          color: palette.cardBorder,
+                          borderRadius: BorderRadius.circular(99),
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.cardShadow,
-                            blurRadius: 20,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _FinishTarget(
+                          label: 'Save & submit',
+                          caption: 'Slide up',
+                          icon: Icons.upload_rounded,
+                          foreground: submitText,
+                          background: submitBg,
+                          active: _towardsSubmit,
+                          onTap: () => _finish(finishVersionSubmitted),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: _FinishTarget(
+                          label: 'Save as final',
+                          caption: 'Slide down',
+                          icon: Icons.download_rounded,
+                          foreground: finalText,
+                          background: finalBg,
+                          active: _towardsFinal,
+                          onTap: () => _finish(finishVersionFinal),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: _dragging
+                            ? Duration.zero
+                            : const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        transform: Matrix4.translationValues(0, _drag, 0),
+                        child: Container(
+                          key: finishVersionKnobKey,
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
                             color: _towardsSubmit
-                                ? submitText
+                                ? submitBg
                                 : _towardsFinal
-                                ? finalText
-                                : palette.accentText,
-                            size: 26,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'v${widget.versionNo}',
-                            style: TextStyle(
+                                ? finalBg
+                                : palette.card,
+                            shape: BoxShape.circle,
+                            border: Border.all(
                               color: _towardsSubmit
                                   ? submitText
                                   : _towardsFinal
                                   ? finalText
-                                  : palette.text,
-                              fontWeight: FontWeight.w800,
+                                  : palette.accent,
+                              width: 2,
                             ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.cardShadow,
+                                blurRadius: 20,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.description_outlined,
+                                color: _towardsSubmit
+                                    ? submitText
+                                    : _towardsFinal
+                                    ? finalText
+                                    : palette.accentText,
+                                size: 26,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'v${widget.versionNo}',
+                                style: TextStyle(
+                                  color: _towardsSubmit
+                                      ? submitText
+                                      : _towardsFinal
+                                      ? finalText
+                                      : palette.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              Text(
+                'Slide the version up to submit, or down to keep it final.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: palette.mutedText, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          Text(
-            'Slide the version up to submit, or down to keep it final.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.mutedText, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }

@@ -124,6 +124,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
         const <int>{};
     final remindersEnabled =
         ref.watch(profileProvider).value?.remindDeadlines ?? true;
+    final isLesson = activity.value?.kind == 'lesson';
 
     return Scaffold(
       body: SafeArea(
@@ -156,16 +157,20 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
               activity.when(
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
-                data: (a) => a == null
-                    ? const SizedBox.shrink()
-                    : Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _ActivityDetails(
-                          activity: a,
-                          remindersEnabled: remindersEnabled,
-                          onStatusChanged: (status) => _setStatus(a, status),
-                        ),
-                      ),
+                data: (a) {
+                  if (a == null) return const SizedBox.shrink();
+                  if (a.kind == 'lesson') {
+                    return _LessonDetails(activity: a);
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ActivityDetails(
+                      activity: a,
+                      remindersEnabled: remindersEnabled,
+                      onStatusChanged: (status) => _setStatus(a, status),
+                    ),
+                  );
+                },
               ),
               Expanded(
                 child: files.when(
@@ -175,10 +180,13 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                       AppErrorState(message: 'Could not load files: $e'),
                   data: (items) {
                     if (items.isEmpty) {
-                      return const EmptyState(
+                      return EmptyState(
                         icon: Icons.folder_open_outlined,
                         title: 'No files yet.',
-                        message: 'Add a file to keep your work in one place.',
+                        message: isLesson
+                            ? 'Add a file to keep this lesson material in one '
+                                  'place.'
+                            : 'Add a file to keep your work in one place.',
                         showBrandLogo: true,
                       );
                     }
@@ -188,6 +196,7 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                       itemBuilder: (context, index) => _FileCard(
                         item: items[index],
                         hasActiveEdit: editing.contains(items[index].file.id),
+                        isLesson: isLesson,
                         onOpen: () => _open(items[index]),
                         onFinish: () => _finish(items[index]),
                       ),
@@ -202,6 +211,51 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lessons have no status or deadline; keep the folder notes visible without
+/// offering activity-only actions.
+class _LessonDetails extends StatelessWidget {
+  const _LessonDetails({required this.activity});
+
+  final Activity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = activity.notes.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.folder_outlined, color: context.palette.accentText),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lesson folder',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (notes.isNotEmpty)
+                    Text(
+                      notes,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -284,12 +338,14 @@ class _FileCard extends StatelessWidget {
   const _FileCard({
     required this.item,
     required this.hasActiveEdit,
+    required this.isLesson,
     required this.onOpen,
     required this.onFinish,
   });
 
   final FileListItem item;
   final bool hasActiveEdit;
+  final bool isLesson;
   final VoidCallback onOpen;
   final VoidCallback onFinish;
 
@@ -358,10 +414,11 @@ class _FileCard extends StatelessWidget {
                 label: 'Commit',
                 onPressed: () => context.push('/files/${item.file.id}/commit'),
               ),
-              CardButton(
-                label: 'Finish',
-                onPressed: commit == null ? null : onFinish,
-              ),
+              if (!isLesson)
+                CardButton(
+                  label: 'Finish',
+                  onPressed: commit == null ? null : onFinish,
+                ),
             ],
           ),
         ],

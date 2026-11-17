@@ -286,7 +286,7 @@ class _SubjectCard extends ConsumerWidget {
       opacity: subject.isArchived ? 0.65 : 1,
       child: AppCard(
         padding: const EdgeInsets.all(14),
-        onTap: () => context.push('/subjects/${subject.id}/activities'),
+        onTap: () => context.push('/subjects/${subject.id}/files'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
