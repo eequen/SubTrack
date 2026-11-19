@@ -60,3 +60,6 @@ config.json
 
 # Agent tooling state, not part of the project
 .brud/
+
+# Design source stays local; the exported screens in redesign/png/ are tracked
+redesign/*.pdf
