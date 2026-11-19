@@ -495,7 +495,7 @@ If something seems needed that is on this list, stop and ask the team.
 
 ## 14. Screens and routes
 
-The app was designed as phone mockups (390 x 844) on a design canvas. The redesign PDF includes 13 phone screens; Calendar is among them. All activities, Create account, Edit flow, and Edit profile follow the text below where no dedicated mockup exists. **This section is the source of truth for behavior.** If an image and this text disagree, ask before building.
+The app was designed as phone mockups (390 x 844) on a design canvas. All activities, Create account, Edit flow, and Edit profile follow the text below where no dedicated mockup exists. **This section is the source of truth for behavior.** If an image and this text disagree, ask before building.
 
 **Flow:** Login (or Create account) > Home. A new student taps the semester pill or the dashed card to choose or create a semester. After that: Home > Subjects > Activities > Activity files > Version history, Edit, or Commit new version. Search opens from the header on Home or Subjects.
 

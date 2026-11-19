@@ -66,7 +66,7 @@ const _messages = <String, String>{
       'Every card in that reply was a duplicate. Ask the AI for a fresh deck.',
 };
 
-/// The exact prompt shipped in `docs/prompts/flashcards_v1.txt`.
+/// The exact prompt the app hands to the student's external AI chat app.
 const flashcardPromptV1 = '''You are creating study flashcards from the document attached to this message.
 
 Follow these rules exactly:

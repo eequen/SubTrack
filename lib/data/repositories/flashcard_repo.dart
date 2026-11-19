@@ -30,7 +30,7 @@ class CardDraft {
   final String back;
 }
 
-/// Flashcards are local-only (AGENTS.md section 9; docs/flashcards_ai_import.md).
+/// Flashcards are local-only (AGENTS.md section 9).
 /// They are included in the local `.zip` backup and excluded from Supabase.
 class FlashcardRepo {
   FlashcardRepo(this.db);
