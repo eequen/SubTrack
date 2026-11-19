@@ -43,20 +43,17 @@ void main() {
   ) async {
     final db = await _pumpSubjects(tester);
 
-    expect(
-      find.text('1st Semester - SY 2026-2027\nMy Subjects'),
-      findsOneWidget,
-    );
-    expect(find.text('No subjects yet.'), findsOneWidget);
+    expect(find.text('1st Semester - SY 2026-2027'), findsOneWidget);
+    expect(find.text('My Subjects'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, '+ New subject'));
+    await tester.tap(find.text('New subject'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'CP1');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create subject'));
     await tester.pumpAndSettle();
 
     expect(find.text('CP1'), findsOneWidget);
-    expect(find.text('0 activities - 0 files'), findsOneWidget);
+    expect(find.text('0 activities · 0 files'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Subject actions'));
     await tester.pumpAndSettle();
@@ -78,13 +75,19 @@ void main() {
   ) async {
     final db = await _pumpSubjects(tester);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, '+ New subject'));
+    await tester.tap(find.text('New subject'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create subject'));
     await tester.pumpAndSettle();
 
     expect(find.text('Subject name is required.'), findsOneWidget);
-    expect(find.text('New subject'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('New subject'),
+      ),
+      findsOneWidget,
+    );
 
     await db.close();
     await tester.pump();

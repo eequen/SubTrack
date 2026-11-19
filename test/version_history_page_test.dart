@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/commit_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
@@ -17,6 +18,7 @@ import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/finish_version_sheet.dart';
 
 import 'helpers.dart';
 
@@ -186,6 +188,31 @@ void main() {
       ).watchById(setup.fileId).first;
       expect(item!.file.currentCommitId, v4.id);
     });
+
+    await closeDatabase(tester, setup.db);
+  });
+
+  testWidgets('the current version can be finished from history', (
+    tester,
+  ) async {
+    final setup = await _setup(tester);
+
+    // Pressing the current version (not just its Finish button) opens it.
+    await tester.tap(find.text('v3 - Third draft'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save v3'), findsOneWidget);
+
+    await tester.drag(find.byKey(finishVersionKnobKey), const Offset(0, 90));
+    await tester.pumpAndSettle();
+
+    final activity = await tester.runAsync(() async {
+      final item = await FileRepo(
+        setup.db,
+        BlobStore(Future.value(setup.tmp)),
+      ).watchById(setup.fileId).first;
+      return ActivityRepo(setup.db).watchById(item!.file.activityId).first;
+    });
+    expect(activity?.status, 'final');
 
     await closeDatabase(tester, setup.db);
   });

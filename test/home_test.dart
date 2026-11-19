@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/calendar_event_repo.dart';
 import 'package:subtrack/data/storage/blob_store.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
@@ -24,6 +25,7 @@ void _tallView(WidgetTester tester) {
 Future<AppDatabase> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefsInitial = const {},
+  String initialLocation = '/home',
 }) async {
   SharedPreferences.setMockInitialValues(prefsInitial);
   final prefs = await SharedPreferences.getInstance();
@@ -35,6 +37,7 @@ Future<AppDatabase> _pumpApp(
         sharedPreferencesProvider.overrideWithValue(prefs),
         authServiceProvider.overrideWithValue(auth),
         databaseProvider.overrideWithValue(db),
+        initialLocationProvider.overrideWithValue(initialLocation),
       ],
       child: const SubTrackApp(),
     ),
@@ -84,6 +87,30 @@ Future<void> _seedSubjectAndActivity(
 }
 
 void main() {
+  testWidgets('home shows upcoming standalone calendar events', (tester) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {
+        'subtrack_fake_auth_email': 'kent@gmail.com',
+        'selected_semester:kent@gmail.com': 1,
+      },
+    );
+    final semesterId = await _seedSemester(db);
+    await CalendarEventRepo(db).create(
+      semesterId: semesterId,
+      title: 'Science fair',
+      startsAt: DateTime.now().add(const Duration(days: 2)),
+      notes: 'Bring the poster.',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upcoming events'), findsOneWidget);
+    expect(find.text('Science fair'), findsOneWidget);
+
+    await db.close();
+  });
+
   testWidgets(
     'a signed-in session without a chosen semester shows the new-user home',
     (tester) async {
@@ -97,12 +124,106 @@ void main() {
       expect(find.text('kent'), findsOneWidget);
       expect(find.text('No semester yet'), findsOneWidget);
       expect(find.text('Add your first semester'), findsOneWidget);
-      expect(find.text('Start here'), findsOneWidget);
-      // The subjects icon is disabled for brand-new students.
+      expect(find.text('Quick access'), findsNothing);
+      // Home, the centre Menu button, and Cloud are the only bar entries.
+      expect(find.byKey(const Key('nav-home')), findsOneWidget);
+      expect(find.byKey(const Key('nav-menu')), findsOneWidget);
+      expect(find.byKey(const Key('nav-cloud')), findsOneWidget);
+      expect(find.text('Subjects'), findsNothing);
+      await tester.tap(find.text('Add your first semester'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose semester'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+
+      // Menu items that need a semester are disabled until one exists.
+      await tester.tap(find.byKey(const Key('nav-menu')));
+      await tester.pumpAndSettle();
       expect(find.text('Subjects'), findsOneWidget);
+      expect(find.text('Choose a semester first'), findsWidgets);
+      await tester.tap(find.text('Subjects'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome,'), findsOneWidget);
       await db.close();
     },
   );
+
+  testWidgets('semester pill opens a chooser sheet and keeps the home route', (
+    tester,
+  ) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {
+        'subtrack_fake_auth_email': 'kent@gmail.com',
+        'selected_semester:kent@gmail.com': 1,
+      },
+    );
+    final semesterId = await _seedSemester(db);
+    expect(semesterId, 1);
+    final secondId = await db
+        .into(db.semesters)
+        .insert(
+          SemestersCompanion.insert(
+            term: 'second',
+            schoolYear: '2026-2027',
+            startDate: DateTime(2027, 1, 10),
+            endDate: DateTime(2027, 5, 20),
+          ),
+        );
+    expect(secondId, 2);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1st Semester - SY 2026-2027'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose semester'), findsOneWidget);
+
+    await tester.tap(find.text('2nd Semester · SY 2026-2027'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose semester'), findsNothing);
+    expect(find.text('2nd Semester - SY 2026-2027'), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
+    await db.close();
+  });
+
+  testWidgets('new semester form steps school year and previews changes', (
+    tester,
+  ) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {'subtrack_fake_auth_email': 'kent@gmail.com'},
+      initialLocation: '/semesters/new',
+    );
+
+    final year = DateTime.now().year;
+    expect(find.text('School year'), findsOneWidget);
+    expect(find.text('$year – ${year + 1}'), findsOneWidget);
+    expect(find.text('Preview'), findsOneWidget);
+    await tester.tap(find.byTooltip('Next school year'));
+    await tester.pump();
+    expect(find.text('${year + 1} – ${year + 2}'), findsOneWidget);
+    expect(find.textContaining('SY ${year + 1}-${year + 2}'), findsOneWidget);
+    await db.close();
+  });
+
+  testWidgets('semesters deep link shows chooser content', (tester) async {
+    _tallView(tester);
+    final db = await _pumpApp(
+      tester,
+      prefsInitial: {'subtrack_fake_auth_email': 'kent@gmail.com'},
+      initialLocation: '/semesters',
+    );
+
+    expect(find.text('Choose semester'), findsOneWidget);
+    expect(find.text('No semesters yet'), findsOneWidget);
+    expect(
+      find.text('Add a semester to start organizing your subjects.'),
+      findsOneWidget,
+    );
+    expect(find.text('New semester'), findsOneWidget);
+    await db.close();
+  });
 
   testWidgets('the chosen semester shows the pill, due card, and progress', (
     tester,
@@ -219,7 +340,7 @@ void main() {
     // the route lives in the home branch of the navigation shell.
     expect(find.text('Sample Essay'), findsOneWidget);
     expect(find.text('No files yet.'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
     await prepared.db.close();
     await tester.pump();
   });

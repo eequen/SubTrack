@@ -26,7 +26,7 @@ flutter doctor            # fix anything it flags
 The Supabase URL and key are **not stored in the repo** (AGENTS.md rule 8).
 Ask for the two cloud values in the group chat, then:
 
-1. Copy `docs/config.example.json` to `config.json` in the repo root
+1. Copy `config.example.json` to `config.json` in the repo root
 2. Paste the two values in
 
 `config.json` is gitignored — it will never be committed. Only the example file with placeholders is in the repo.
@@ -51,8 +51,8 @@ that is exactly what the backup/restore flow is for.
 
 ## Cloud tables stay in one place
 
-All `docs/supabase_schema*.sql` scripts are applied by the project owner
-in the Supabase dashboard. Teammates do **not** run them.
+The Supabase schema is applied by the project owner in the Supabase
+dashboard. Teammates do **not** run anything against the cloud project.
 
 ## Git workflow (short version)
 

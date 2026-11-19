@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/features/activities/activity_dialog.dart';
+import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/activities/all_activities_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 9 from AGENTS.md section 14: every activity in the chosen
 /// semester across all subjects, with filter chips (All, Due soon, and the
@@ -28,6 +36,102 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
     } else {
       context.go('/home');
     }
+  }
+
+  Future<void> _changeStatus(Activity activity) async {
+    final status = await showStatusSheet(
+      context,
+      currentStatus: activity.status,
+    );
+    if (status == null || status == activity.status || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      await ref.read(reminderServiceProvider).syncAll();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update status: $error')),
+      );
+    }
+  }
+
+  Future<void> _addActivity() async {
+    final semesterId = ref.read(selectedSemesterProvider);
+    if (semesterId == null) {
+      _snack('Choose a semester before adding an activity.');
+      return;
+    }
+
+    try {
+      final subjects = await ref.read(subjectsProvider(semesterId).future);
+      if (!mounted) return;
+      if (subjects.isEmpty) {
+        _snack('Create a subject before adding an activity.');
+        return;
+      }
+
+      final subjectId = await showModalBottomSheet<int>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SheetScaffold(
+          title: 'Choose a subject',
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: subjects.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final subject = subjects[index].subject;
+                return AppCard(
+                  padding: EdgeInsets.zero,
+                  onTap: () => Navigator.of(context).pop(subject.id),
+                  child: ListTile(
+                    title: Text(subject.name),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: context.palette.mutedText,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      if (subjectId == null || !mounted) return;
+
+      final result = await showNewActivityDialog(context);
+      if (result == null || !mounted) return;
+      await ref
+          .read(activityRepoProvider)
+          .create(
+            subjectId: subjectId,
+            title: result.title,
+            notes: result.notes,
+            deadline: result.deadline,
+            status: result.status,
+          );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      final reminders = ref.read(reminderServiceProvider);
+      if (result.deadline?.isAfter(DateTime.now()) == true) {
+        await reminders.requestPermission();
+      }
+      await reminders.syncAll();
+    } catch (error) {
+      _snack('Could not add activity: $error');
+    }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -82,6 +186,11 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                       ],
                     ),
                   ),
+                  TextButton.icon(
+                    onPressed: canBuildList ? _addActivity : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New activity'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -106,27 +215,35 @@ class _AllActivitiesPageState extends ConsumerState<AllActivitiesPage> {
                 child: !canBuildList
                     ? const _NoSemesterState()
                     : itemsAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (e, _) =>
-                            Center(child: Text('Could not load: $e')),
+                        loading: () => const AppLoadingState(
+                          message: 'Loading activities...',
+                        ),
+                        error: (e, _) => AppErrorState(
+                          message: 'Could not load activities: $e',
+                        ),
                         data: (_) {
                           if (items.isEmpty) {
-                            return const Center(
-                              child: Text('No activities yet.'),
+                            return const EmptyState(
+                              icon: Icons.assignment_outlined,
+                              title: 'No activities yet.',
+                              message: 'Add an activity to start tracking your work.',
                             );
                           }
                           if (filtered.isEmpty) {
-                            return const Center(
-                              child: Text('No activities match this filter.'),
+                            return const EmptyState(
+                              icon: Icons.filter_list,
+                              title: 'No activities match this filter.',
+                              message: 'Choose another filter to see more activities.',
                             );
                           }
                           return ListView.separated(
                             itemCount: filtered.length,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (context, index) =>
-                                _AllActivityCard(item: filtered[index]),
+                            itemBuilder: (context, index) => _AllActivityCard(
+                              item: filtered[index],
+                              onStatus: _changeStatus,
+                            ),
                           );
                         },
                       ),
@@ -182,9 +299,10 @@ class _NoSemesterState extends StatelessWidget {
 }
 
 class _AllActivityCard extends StatelessWidget {
-  const _AllActivityCard({required this.item});
+  const _AllActivityCard({required this.item, required this.onStatus});
 
   final AllActivitiesItem item;
+  final Future<void> Function(Activity activity) onStatus;
 
   String get _filesLabel {
     final n = item.fileCount;
@@ -197,58 +315,54 @@ class _AllActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activity = item.activity;
-    return Material(
-      color: context.palette.card,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        onTap: () => context.push('/activities/${activity.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: () => context.push('/activities/${activity.id}'),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activity.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.subjectName,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Text(
-                      activity.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
+                    StatusChip(
+                      status: activity.status,
+                      onTap: () => onStatus(activity),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subjectName,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        StatusChip(status: activity.status),
-                        if (activity.deadline != null) ...[
-                          const SizedBox(width: 8),
-                          DeadlineChip(deadline: activity.deadline!),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _filesLabel,
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
-                      ),
-                    ),
+                    if (activity.deadline != null) ...[
+                      const SizedBox(width: 8),
+                      DeadlineChip(deadline: activity.deadline!),
+                    ],
                   ],
                 ),
-              ),
-              Icon(Icons.chevron_right, color: context.palette.mutedText),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  _filesLabel,
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right, color: context.palette.mutedText),
+        ],
       ),
     );
   }

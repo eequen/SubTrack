@@ -19,6 +19,17 @@ final activitiesProvider = StreamProvider.family<List<ActivityListItem>, int>((
   return ref.watch(activityRepoProvider).watchWithCounts(subjectId);
 });
 
+/// Subject lessons reuse the activity files/history model but have no
+/// deadline or status. This stream only returns `kind = lesson` folders.
+final lessonsProvider = StreamProvider.family<List<ActivityListItem>, int>((
+  ref,
+  subjectId,
+) {
+  return ref
+      .watch(activityRepoProvider)
+      .watchWithCounts(subjectId, kind: ActivityRepo.lessonKind);
+});
+
 /// Nearest deadlines per semester, for the Due soon card on Subjects.
 final upcomingProvider = StreamProvider.family<List<UpcomingActivity>, int>((
   ref,

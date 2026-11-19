@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/brand_logo.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 1 from AGENTS.md section 14: Log in with an email or a username.
 /// Creating an account lives on its own screen (`/create-account`).
@@ -61,85 +63,95 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppTheme.screenPadding),
+          padding: EdgeInsets.zero,
           children: [
-            const SizedBox(height: 48),
-            Text(
-              'SubTrack',
-              style: textTheme.headlineLarge?.copyWith(
-                color: context.palette.accent,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Every subject, every version, safely kept.',
-              style: textTheme.bodyLarge?.copyWith(
-                color: context.palette.mutedText,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // First-time users must see where to go (requested change).
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: context.palette.inProgressBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'First time here? Create an account first — the button at '
-                'the end of this screen.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: context.palette.inProgressText,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text('Email or username', style: textTheme.labelLarge),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _identifierController,
-              autocorrect: false,
-              enableSuggestions: false,
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => _clearError(),
-            ),
-            const SizedBox(height: 16),
-            Text('Password', style: textTheme.labelLarge),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _passwordController,
-              obscureText: !_passwordVisible,
-              onChanged: (_) => _clearError(),
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                suffixIcon: IconButton(
-                  onPressed: () =>
-                      setState(() => _passwordVisible = !_passwordVisible),
-                  icon: Icon(
-                    _passwordVisible ? Icons.visibility_off : Icons.visibility,
+            BrandHeader(
+              padding: const EdgeInsets.fromLTRB(20, 32, 20, 36),
+              child: Column(
+                children: [
+                  const BrandLogo.icon(height: 104, onDarkSurface: true),
+                  const SizedBox(height: 16),
+                  const BrandLogo.wordmark(height: 36, onDarkSurface: true),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Every subject, every version, safely kept.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: context.palette.onAccent,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: context.palette.overdue)),
-              const SizedBox(height: 8),
-            ],
-            ElevatedButton(
-              onPressed: _busy ? null : _submit,
-              child: Text(_busy ? 'Please wait…' : 'Log in'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _busy ? null : () => context.go('/signup'),
-              child: const Text('Create account'),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Sign in once. After that, the app works offline.',
-              textAlign: TextAlign.center,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Username', style: textTheme.labelLarge),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _identifierController,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your username',
+                    ),
+                    onChanged: (_) => _clearError(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Password', style: textTheme.labelLarge),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_passwordVisible,
+                    onChanged: (_) => _clearError(),
+                    onSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your password',
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _passwordVisible = !_passwordVisible,
+                        ),
+                        icon: Icon(
+                          _passwordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: context.palette.overdue),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  const SizedBox(height: 8),
+                  PrimaryButton(
+                    label: 'Log in',
+                    loading: _busy,
+                    onPressed: _busy ? null : _submit,
+                  ),
+                  const SizedBox(height: 10),
+                  SecondaryButton(
+                    label: 'Create account',
+                    onPressed: _busy ? null : () => context.go('/signup'),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Sign in once. After that, the app works offline.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: context.palette.mutedText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

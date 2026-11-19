@@ -8,6 +8,7 @@ import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/avatar.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 16 from AGENTS.md section 14: Edit profile.
 ///
@@ -162,85 +163,106 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ],
             ),
             const SizedBox(height: 20),
-            Center(
-              child: CircleAvatar(
-                radius: 44,
-                backgroundColor: context.palette.accent,
-                foregroundImage: hasPhoto
-                    ? FileImage(File(profile.avatarPath!))
-                    : null,
-                onForegroundImageError: hasPhoto ? (_, _) {} : null,
-                child: Text(
-                  _name.text.isEmpty ? 'S' : _name.text[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
+            AppCard(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 44,
+                    backgroundColor: context.palette.accent,
+                    foregroundImage: hasPhoto
+                        ? FileImage(File(profile.avatarPath!))
+                        : null,
+                    onForegroundImageError: hasPhoto ? (_, _) {} : null,
+                    child: Text(
+                      _name.text.isEmpty ? 'S' : _name.text[0].toUpperCase(),
+                      style: TextStyle(
+                        color: context.palette.onAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => _pickPhoto(ImageSource.camera),
-                  icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                  label: const Text('Take photo'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => _pickPhoto(ImageSource.gallery),
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text('Choose from gallery'),
-                ),
-                if (hasPhoto)
-                  TextButton(
-                    onPressed: _busy ? null : _removePhoto,
-                    child: const Text('Remove photo'),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _pickPhoto(ImageSource.camera),
+                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                        label: const Text('Take photo'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _pickPhoto(ImageSource.gallery),
+                        icon: const Icon(
+                          Icons.photo_library_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Choose from gallery'),
+                      ),
+                      if (hasPhoto)
+                        TextButton(
+                          onPressed: _busy ? null : _removePhoto,
+                          child: const Text('Remove photo'),
+                        ),
+                    ],
                   ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              key: const ValueKey('display-name-field'),
-              controller: _name,
-              maxLength: 30,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Display name'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              key: const ValueKey('username-field'),
-              enabled: false,
-              controller: TextEditingController(text: username),
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                helperText: "Username can't be changed",
+                ],
               ),
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: context.palette.overdue, fontSize: 13),
+            const SizedBox(height: 16),
+            AppCard(
+              child: Column(
+                children: [
+                  TextField(
+                    key: const ValueKey('display-name-field'),
+                    controller: _name,
+                    maxLength: 30,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Display name',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('username-field'),
+                    enabled: false,
+                    controller: TextEditingController(text: username),
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      helperText: "Username can't be changed",
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: context.palette.overdue,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
             const SizedBox(height: 20),
-            ElevatedButton(
+            PrimaryButton(
               key: const ValueKey('save-profile'),
+              label: 'Save changes',
               onPressed: _busy ? null : _save,
-              child: const Text('Save changes'),
             ),
-            TextButton(
+            SecondaryButton(
+              label: 'Cancel',
               onPressed: _busy ? null : () => Navigator.of(context).maybePop(),
-              child: const Text('Cancel'),
             ),
           ],
         ),

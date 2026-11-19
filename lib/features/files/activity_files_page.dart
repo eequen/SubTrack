@@ -6,12 +6,18 @@ import 'package:open_filex/open_filex.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/edit/edit_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/features/profile/profile_providers.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/finish_version_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 6 from AGENTS.md section 14: files of one activity.
 class ActivityFilesPage extends ConsumerStatefulWidget {
@@ -45,6 +51,8 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
             bytes: picked.bytes,
             displayName: picked.name,
           );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      _snack('File added. Back up your recent changes when ready.');
     } catch (e) {
       _snack('Could not add file: $e');
     }
@@ -54,6 +62,41 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<bool> _setStatus(Activity activity, String status) async {
+    if (activity.status == status) return true;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      await ref.read(reminderServiceProvider).syncAll();
+      return true;
+    } catch (error) {
+      _snack('Could not update status: $error');
+      return false;
+    }
+  }
+
+  Future<void> _finish(FileListItem item) async {
+    final commit = item.currentCommit;
+    final activity = ref.read(activityProvider(_activityId)).value;
+    if (commit == null || activity == null) return;
+
+    final result = await showFinishVersionSheet(
+      context,
+      versionNo: commit.versionNo,
+      fileName: item.file.displayName,
+      currentStatus: activity.status,
+    );
+    if (result == null || !mounted) return;
+    if (!await _setStatus(activity, result)) return;
+    _snack(
+      result == finishVersionSubmitted
+          ? 'v${commit.versionNo} saved and submitted.'
+          : 'v${commit.versionNo} saved as final.',
+    );
   }
 
   Future<void> _open(FileListItem item) async {
@@ -79,6 +122,9 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
     final editing =
         ref.watch(activeEditSessionsProvider(_activityId)).value ??
         const <int>{};
+    final remindersEnabled =
+        ref.watch(profileProvider).value?.remindDeadlines ?? true;
+    final isLesson = activity.value?.kind == 'lesson';
 
     return Scaffold(
       body: SafeArea(
@@ -98,22 +144,51 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                     child: activity.when(
                       loading: () => const SizedBox.shrink(),
                       error: (_, _) => const Text('Activity not found'),
-                      data: (a) => a == null
-                          ? const Text('Activity not found')
-                          : _ActivityHeader(activity: a),
+                      data: (a) => Text(
+                        a?.title ?? 'Activity not found',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              activity.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (a) {
+                  if (a == null) return const SizedBox.shrink();
+                  if (a.kind == 'lesson') {
+                    return _LessonDetails(activity: a);
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ActivityDetails(
+                      activity: a,
+                      remindersEnabled: remindersEnabled,
+                      onStatusChanged: (status) => _setStatus(a, status),
+                    ),
+                  );
+                },
+              ),
               Expanded(
                 child: files.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading files...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load files: $e'),
                   data: (items) {
                     if (items.isEmpty) {
-                      return const Center(child: Text('No files yet.'));
+                      return EmptyState(
+                        icon: Icons.folder_open_outlined,
+                        title: 'No files yet.',
+                        message: isLesson
+                            ? 'Add a file to keep this lesson material in one '
+                                  'place.'
+                            : 'Add a file to keep your work in one place.',
+                        showBrandLogo: true,
+                      );
                     }
                     return ListView.separated(
                       itemCount: items.length,
@@ -121,16 +196,18 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
                       itemBuilder: (context, index) => _FileCard(
                         item: items[index],
                         hasActiveEdit: editing.contains(items[index].file.id),
+                        isLesson: isLesson,
                         onOpen: () => _open(items[index]),
+                        onFinish: () => _finish(items[index]),
                       ),
                     );
                   },
                 ),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
+              PrimaryButton(
+                label: '+ Add file',
                 onPressed: _activityId <= 0 ? null : _addFile,
-                child: const Text('+ Add file'),
               ),
             ],
           ),
@@ -140,35 +217,111 @@ class _ActivityFilesPageState extends ConsumerState<ActivityFilesPage> {
   }
 }
 
-class _ActivityHeader extends StatelessWidget {
-  const _ActivityHeader({required this.activity});
+/// Lessons have no status or deadline; keep the folder notes visible without
+/// offering activity-only actions.
+class _LessonDetails extends StatelessWidget {
+  const _LessonDetails({required this.activity});
 
   final Activity activity;
 
   @override
   Widget build(BuildContext context) {
     final notes = activity.notes.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          activity.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            StatusChip(status: activity.status),
-            if (activity.deadline != null) ...[
-              const SizedBox(width: 8),
-              DeadlineChip(deadline: activity.deadline!),
-            ],
+            Icon(Icons.folder_outlined, color: context.palette.accentText),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lesson folder',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (notes.isNotEmpty)
+                    Text(
+                      notes,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ActivityDetails extends StatelessWidget {
+  const _ActivityDetails({
+    required this.activity,
+    required this.remindersEnabled,
+    required this.onStatusChanged,
+  });
+
+  final Activity activity;
+  final bool remindersEnabled;
+  final ValueChanged<String> onStatusChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = activity.notes.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedSelector(
+          options: [
+            for (final status in ActivityRepo.statuses)
+              SegmentOption(value: status, label: statusLabel(status)),
+          ],
+          value: activity.status,
+          onChanged: onStatusChanged,
+        ),
+        if (activity.deadline != null) ...[
+          const SizedBox(height: 8),
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.event_outlined, color: context.palette.deadlineText),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Due ${DateFormat('EEE, MMM d').format(activity.deadline!)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        remindersEnabled
+                            ? 'Reminder: 1 day before'
+                            : 'Deadline reminders are off in Profile',
+                        style: TextStyle(
+                          color: context.palette.mutedText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                DeadlineChip(deadline: activity.deadline!),
+              ],
+            ),
+          ),
+        ],
         if (notes.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             notes,
             style: TextStyle(color: context.palette.mutedText, fontSize: 13),
@@ -185,91 +338,90 @@ class _FileCard extends StatelessWidget {
   const _FileCard({
     required this.item,
     required this.hasActiveEdit,
+    required this.isLesson,
     required this.onOpen,
+    required this.onFinish,
   });
 
   final FileListItem item;
   final bool hasActiveEdit;
+  final bool isLesson;
   final VoidCallback onOpen;
+  final VoidCallback onFinish;
 
   static final _dateFormat = DateFormat('MMM d, h:mm a');
 
   @override
   Widget build(BuildContext context) {
     final commit = item.currentCommit;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.file.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasActiveEdit) ...[
+                const SizedBox(width: 6),
+                const EditingChip(),
+              ],
+              if (commit != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
                   child: Text(
-                    item.file.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    'v${commit.versionNo}',
+                    style: TextStyle(color: context.palette.mutedText),
                   ),
                 ),
-                if (hasActiveEdit) ...[
-                  const SizedBox(width: 6),
-                  const EditingChip(),
-                ],
-                if (commit != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      'v${commit.versionNo}',
-                      style: TextStyle(color: context.palette.mutedText),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            if (commit != null) ...[
-              Text(
-                '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                formatBytes(commit.sizeBytes),
-                style: TextStyle(
-                  color: context.palette.mutedText,
-                  fontSize: 13,
-                ),
-              ),
             ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                CardButton(label: 'Open', onPressed: onOpen),
-                CardButton(
-                  label: 'Edit',
-                  onPressed: () => context.push('/files/${item.file.id}/edit'),
-                ),
-                CardButton(
-                  label: 'History',
-                  onPressed: () =>
-                      context.push('/files/${item.file.id}/history'),
-                ),
-                CardButton(
-                  label: 'Commit',
-                  onPressed: () =>
-                      context.push('/files/${item.file.id}/commit'),
-                ),
-              ],
+          ),
+          const SizedBox(height: 4),
+          if (commit != null) ...[
+            Text(
+              '${commit.message} · ${_dateFormat.format(commit.createdAt)}',
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              formatBytes(commit.sizeBytes),
+              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
             ),
           ],
-        ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              CardButton(label: 'Open', onPressed: onOpen),
+              CardButton(
+                label: 'Edit',
+                onPressed: () => context.push('/files/${item.file.id}/edit'),
+              ),
+              CardButton(
+                label: 'History',
+                onPressed: () => context.push('/files/${item.file.id}/history'),
+              ),
+              CardButton(
+                label: 'Commit',
+                onPressed: () => context.push('/files/${item.file.id}/commit'),
+              ),
+              if (!isLesson)
+                CardButton(
+                  label: 'Finish',
+                  onPressed: commit == null ? null : onFinish,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -11,6 +11,8 @@ import 'package:subtrack/features/cloud/cloud_providers.dart';
 import 'package:subtrack/features/dashboard/home_providers.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
+import 'package:subtrack/shared/brand_logo.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 15 from AGENTS.md section 14: Profile and settings.
 ///
@@ -163,7 +165,7 @@ class ProfilePage extends ConsumerWidget {
                     Icons.chevron_right,
                     color: context.palette.mutedText,
                   ),
-                  onTap: () => context.push('/cloud'),
+                  onTap: () => context.go('/cloud'),
                 ),
               ],
             ),
@@ -204,6 +206,8 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
+            const BrandLogo.full(height: 58),
+            const SizedBox(height: 8),
             Text(
               'SubTrack version 1.0.0',
               textAlign: TextAlign.center,
@@ -356,13 +360,8 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPhoto = avatarPath != null && avatarPath!.isNotEmpty;
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.palette.card,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(color: context.palette.cardBorder),
-      ),
       child: Row(
         children: [
           CircleAvatar(
@@ -371,8 +370,8 @@ class _ProfileCard extends StatelessWidget {
             foregroundImage: hasPhoto ? FileImage(File(avatarPath!)) : null,
             child: Text(
               displayName.isEmpty ? 'S' : displayName[0].toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.palette.onAccent,
                 fontWeight: FontWeight.bold,
                 fontSize: 17,
               ),
@@ -440,7 +439,7 @@ class _AccentDot extends StatelessWidget {
             ),
           ),
           child: selected
-              ? const Icon(Icons.check, color: Colors.white, size: 20)
+              ? Icon(Icons.check, color: context.palette.onAccent, size: 20)
               : null,
         ),
       ),
@@ -460,6 +459,8 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: context.palette.card,
+      elevation: 3,
+      shadowColor: AppColors.cardShadow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(color: context.palette.cardBorder),

@@ -7,9 +7,61 @@ import 'package:path/path.dart' as p;
 import 'package:subtrack/data/db/app_database.dart';
 
 /// Builds a v2-shaped database from the current schema, then reopens it so
-/// the real v2 -> v3 migration runs. This protects the data already on the
-/// student's phone when the Phase 5B build is installed.
+/// the real migrations run. This protects existing student data.
 void main() {
+  test('v4 database gains lesson kinds, decks, and cards', () async {
+    final tmp = await Directory.systemTemp.createTemp('subtrack_migration');
+    final file = File(p.join(tmp.path, 'subtrack.sqlite'));
+    addTearDown(() async {
+      if (await tmp.exists()) await tmp.delete(recursive: true);
+    });
+
+    var db = AppDatabase(NativeDatabase(file));
+    final semesterId = await db
+        .into(db.semesters)
+        .insert(
+          SemestersCompanion.insert(
+            term: 'first',
+            schoolYear: '2026-2027',
+            startDate: DateTime(2026, 8, 18),
+            endDate: DateTime(2026, 12, 19),
+          ),
+        );
+    final subjectId = await db
+        .into(db.subjects)
+        .insert(
+          SubjectsCompanion.insert(
+            semesterId: semesterId,
+            name: 'CP1',
+            color: 0xFF3B4BDB,
+          ),
+        );
+    await db
+        .into(db.activities)
+        .insert(
+          ActivitiesCompanion.insert(subjectId: subjectId, title: 'Thesis'),
+        );
+
+    // Rewind to the v4 shape: no kind column and no flashcard tables.
+    await db.customStatement('DROP TABLE cards');
+    await db.customStatement('DROP TABLE decks');
+    await db.customStatement('ALTER TABLE activities DROP COLUMN kind');
+    await db.customStatement('PRAGMA user_version = 4');
+    await db.close();
+
+    db = AppDatabase(NativeDatabase(file));
+    expect(
+      await db.select(db.semesters).getSingle().then((s) => s.id),
+      semesterId,
+    );
+    expect((await db.select(db.activities).getSingle()).kind, 'activity');
+    expect(await db.select(db.decks).get(), isEmpty);
+    expect(await db.select(db.cards).get(), isEmpty);
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
+    expect(version.read<int>('user_version'), 5);
+    await db.close();
+  });
+
   test('v2 restore links become kind + based_on during migration', () async {
     final tmp = await Directory.systemTemp.createTemp('subtrack_migration');
     final file = File(p.join(tmp.path, 'subtrack.sqlite'));
@@ -92,10 +144,14 @@ void main() {
       'ALTER TABLE commits DROP COLUMN based_on_commit_id',
     );
     await db.customStatement('DROP TABLE edit_sessions');
+    await db.customStatement('DROP TABLE calendar_events');
+    await db.customStatement('DROP TABLE cards');
+    await db.customStatement('DROP TABLE decks');
+    await db.customStatement('ALTER TABLE activities DROP COLUMN kind');
     await db.customStatement('PRAGMA user_version = 2');
     await db.close();
 
-    // 3. Reopen: drift runs onUpgrade(from: 2, to: 3).
+    // 3. Reopen: Drift upgrades the database through the current schema.
     db = AppDatabase(NativeDatabase(file));
     final commits = await (db.select(
       db.commits,
@@ -109,8 +165,13 @@ void main() {
     expect(commits[1].kind, 'restore');
     expect(commits[1].basedOnCommitId, v1);
 
-    // The working-copy table exists and the old column is gone.
+    // The working-copy, calendar, and flashcard tables exist; lessons default
+    // to the existing activity kind, and the old column is gone.
     expect(await db.select(db.editSessions).get(), isEmpty);
+    expect(await db.select(db.calendarEvents).get(), isEmpty);
+    expect(await db.select(db.decks).get(), isEmpty);
+    expect(await db.select(db.cards).get(), isEmpty);
+    expect((await db.select(db.activities).getSingle()).kind, 'activity');
     final columns = await db.customSelect('PRAGMA table_info(commits)').get();
     final names = columns.map((row) => row.read<String>('name')).toList();
     expect(names, contains('kind'));

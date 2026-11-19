@@ -9,11 +9,11 @@ const String _offlineMessage =
     'No internet connection. The first sign-in needs the internet; '
     'after that the app works offline.';
 
-/// Cloud tables are set up by the SQL scripts in docs/; this appears when a
-/// script was not run yet.
+/// Cloud tables are set up once by the project owner; this appears when a
+/// table was not created yet.
 const String _setupMessage =
-    'Cloud setup is incomplete. The username table is missing — run the '
-    'schema script in docs/ first.';
+    'Cloud setup is incomplete. The username table is missing on the '
+    'server — ask the project owner to finish the cloud setup.';
 
 /// Maps a Supabase or network failure to a friendly message
 /// (AGENTS.md section 9, Phase 5 task 2).
@@ -56,9 +56,9 @@ String authErrorMessage(Object error) {
 /// Turns "name123" into the account email behind that username so sign-in
 /// can accept an email OR a username.
 ///
-/// [lookup] queries the public `profiles` table
-/// (docs/supabase_schema_profiles.sql). Email-shaped input passes through
-/// untouched. That account's email is only used for the actual sign-in.
+/// [lookup] queries the public `profiles` table. Email-shaped input passes
+/// through untouched. That account's email is only used for the actual
+/// sign-in.
 Future<String> resolveSignInEmail(
   String identifier,
   Future<String?> Function(String username) lookup,
@@ -149,7 +149,7 @@ class SupabaseAuthService implements AuthService {
         email: trimmedEmail,
         password: password,
         // The on_auth_user_created trigger copies username and display
-        // name into the profiles table (docs/supabase_schema_*.sql).
+        // name into the profiles table.
         data: {'username': uname, 'display_name': trimmedName},
       ),
     );

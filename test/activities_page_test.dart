@@ -9,6 +9,8 @@ import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
 
 Future<AppDatabase> _pumpActivities(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
@@ -47,15 +49,29 @@ Future<void> _createActivity(
   required String title,
   String? statusLabel,
 }) async {
-  await tester.tap(find.widgetWithText(ElevatedButton, '+ New activity'));
+  final addButton = find.widgetWithText(TextButton, 'New activity');
+  if (addButton.evaluate().isNotEmpty) {
+    await tester.tap(addButton);
+  } else {
+    await tester.tap(find.text('Add your first activity'));
+  }
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextField).first, title);
-  if (statusLabel != null) {
-    await tester.tap(find.widgetWithText(ChoiceChip, statusLabel));
-    await tester.pumpAndSettle();
-  }
+  // A new activity always starts as a draft; the status sheet is how the
+  // fixture reaches another status.
   await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
   await tester.pumpAndSettle();
+  if (statusLabel != null) {
+    await tester.tap(find.byType(StatusChip).last);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(StatusSheet),
+        matching: find.text(statusLabel),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
@@ -64,11 +80,12 @@ void main() {
 
     expect(find.text('CP1'), findsOneWidget);
     expect(find.text('0 activities'), findsOneWidget);
-    expect(find.text('No activities yet.'), findsOneWidget);
+    expect(find.text('Add your first activity'), findsOneWidget);
 
     await _createActivity(tester, title: 'Lab report', statusLabel: 'Final');
     expect(find.text('Lab report'), findsOneWidget);
     expect(find.text('1 activity'), findsOneWidget);
+    expect(find.text('Recent changes haven’t been backed up'), findsOneWidget);
     expect(find.text('No files yet.'), findsOneWidget);
 
     await _createActivity(tester, title: 'Quiz');
@@ -93,14 +110,62 @@ void main() {
   ) async {
     final db = await _pumpActivities(tester);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, '+ New activity'));
+    await tester.tap(find.text('Add your first activity'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create activity'));
     await tester.pumpAndSettle();
 
     expect(find.text('Activity title is required.'), findsOneWidget);
-    expect(find.text('New activity'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('New activity'),
+      ),
+      findsOneWidget,
+    );
 
+    await db.close();
+    await tester.pump();
+  });
+
+  testWidgets('delete warns when recent activity changes are unbacked', (
+    tester,
+  ) async {
+    final db = await _pumpActivities(tester);
+    await _createActivity(tester, title: 'Lab report');
+
+    await tester.tap(find.byTooltip('Activity actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Recent changes have not been backed up.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    await db.close();
+    await tester.pump();
+  });
+
+  testWidgets('status chip opens the status sheet and updates immediately', (
+    tester,
+  ) async {
+    final db = await _pumpActivities(tester);
+    await _createActivity(tester, title: 'Lab report');
+
+    expect(tester.getSize(find.byType(StatusChip)).height, lessThan(44));
+    await tester.tap(find.byType(StatusChip));
+    await tester.pumpAndSettle();
+    expect(find.text('Set status'), findsOneWidget);
+
+    final sheet = find.byType(StatusSheet);
+    await tester.tap(find.descendant(of: sheet, matching: find.text('Final')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(StatusChip, 'Final'), findsOneWidget);
     await db.close();
     await tester.pump();
   });

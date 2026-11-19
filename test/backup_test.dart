@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/backup_repo.dart';
 import 'package:subtrack/data/repositories/commit_repo.dart';
+import 'package:subtrack/data/repositories/calendar_event_repo.dart';
 import 'package:subtrack/data/repositories/file_repo.dart';
+import 'package:subtrack/data/repositories/flashcard_repo.dart';
 import 'package:subtrack/data/repositories/semester_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/data/storage/blob_store.dart';
@@ -33,8 +35,20 @@ void main() {
       startDate: DateTime(2026, 8, 18),
       endDate: DateTime(2026, 12, 19),
     );
+    await CalendarEventRepo(db).create(
+      semesterId: semesterId,
+      title: 'Science fair',
+      startsAt: DateTime(2026, 9, 5, 10),
+      endsAt: DateTime(2026, 9, 5, 12),
+      notes: 'Bring the poster.',
+    );
     final subjectId = await SubjectRepo(db)
         .create(semesterId: semesterId, name: 'CP1', color: 0xFF3B4BDB);
+    await FlashcardRepo(db).createDeck(
+      subjectId: subjectId,
+      name: 'Thesis terms',
+      cards: const [CardDraft(front: 'Abstract?', back: 'A summary')],
+    );
     final activityId = await db
         .into(db.activities)
         .insert(
@@ -77,6 +91,11 @@ void main() {
             title: 'Problem set 1',
           ),
         );
+    await FlashcardRepo(db).createDeck(
+      subjectId: subjectId,
+      name: 'Old deck',
+      cards: const [CardDraft(front: 'old', back: 'data')],
+    );
   }
 
   test(
@@ -100,13 +119,25 @@ void main() {
       expect(contents.activities, 1);
       expect(contents.files, 1);
       expect(contents.commits, 2);
+      expect(contents.calendarEvents, 1);
+      expect(contents.decks, 1);
+      expect(contents.cards, 1);
 
       await repo2.import(zipBytes);
 
       final semesters = await db2.select(db2.semesters).get();
       expect(semesters.single.schoolYear, '2026-2027');
+      final events = await db2.select(db2.calendarEvents).get();
+      expect(events.single.title, 'Science fair');
+      expect(events.single.startsAt, DateTime(2026, 9, 5, 10));
+      expect(events.single.endsAt, DateTime(2026, 9, 5, 12));
+      expect(events.single.notes, 'Bring the poster.');
       final subjects = await db2.select(db2.subjects).get();
       expect(subjects.single.name, 'CP1');
+      final decks = await db2.select(db2.decks).get();
+      expect(decks.single.name, 'Thesis terms');
+      final cards = await db2.select(db2.cards).get();
+      expect(cards.single.front, 'Abstract?');
       final activities = await db2.select(db2.activities).get();
       expect(activities.single.title, 'Thesis');
       final files = await db2.select(db2.files).get();
@@ -243,5 +274,8 @@ void main() {
     final activities = await db2.select(db2.activities).get();
     expect(activities.single.title, 'Thesis');
     expect((await db2.select(db2.commits).get()).length, 2);
+    final decks = await db2.select(db2.decks).get();
+    expect(decks.single.name, 'Thesis terms');
+    expect((await db2.select(db2.cards).get()).single.front, 'Abstract?');
   });
 }
