@@ -13,11 +13,73 @@ version-control mental model, applied to coursework instead of code.
   out, hands it to the editor through a `FileProvider`, detects the change when
   the student returns, and saves it as the next version.
 
-| Home | Version history |
-|---|---|
-| ![Home dashboard](redesign/png/Home.png) | ![Version history](redesign/png/Version%20history.png) |
+## Download
 
-More screens are in [`redesign/png/`](redesign/png).
+Grab the prebuilt app here — no Flutter or Android Studio needed:
+
+**[`app-release.apk`](app-release.apk)** (release build, ~66 MB)
+
+1. Download the file on your phone (or copy it over).
+2. Open it. Android asks to allow installs from unknown sources — approve it
+   for your browser/file manager.
+3. Install and open SubTrack.
+
+## How to use SubTrack
+
+**1. Sign in.** The first sign-in needs internet: tap **Create account**
+(display name, username, email, password) or **Log in**. The session is saved
+on the device, so every later visit opens straight into the app — even in
+airplane mode.
+
+**2. Create a semester.** A new account lands on Home with a yellow
+*No semester yet* pill. Tap it (or the dashed card) → **+ New semester** →
+pick the term (1st / 2nd / Summer), the school year with − and +, and the
+start and end dates → **Create semester**. This is the container for one
+school term.
+
+**3. Add subjects.** Open **Subjects** from the menu → dashed **New subject**
+tile → name, colour, icon. Each subject is its own workspace.
+
+**4. Add activities inside a subject.** Open a subject → **Activities** tab →
+**New activity** → title, optional deadline, status. Deadlines show up in the
+calendar and can raise a reminder.
+
+**5. Add files.** Open an activity → **+ Add file** (from storage or camera).
+The first upload becomes **v1** of the file.
+
+**6. Save new versions.** On any file card tap **Commit** to pick the updated
+file, add a message (max 72 characters), and commit it as the next version.
+Or tap **Edit**: SubTrack copies the file, opens it in Word/WPS/another
+editor, and when you return it detects the change and offers to commit it —
+never overwriting the old version.
+
+**7. Browse history and restore.** On a file, open **History** to see every
+version newest first (message, date, size). Open or share any old version,
+or tap **Restore** — that copies the old version into a *new* commit, so
+history only ever grows. Tap **Finish** on the current version to mark the
+activity **Final** or **Submitted**.
+
+**8. Study with flashcards.** Menu → **Flashcards** → create a deck by hand,
+or use **Import from AI**: copy the in-app prompt, paste it into any chat AI
+together with your notes/PDF, paste the JSON back, preview, and save. Study
+mode flips cards offline. Decks stay on the phone and are only in the local
+backup.
+
+**9. Check the calendar.** Menu → **Calendar** shows a month view with amber
+markers for activity deadlines and blue markers for your own events (add,
+edit, delete). **Home** lists what is due very soon, overdue first.
+
+**10. Personalise.** Menu → **Profile** changes the display name and photo,
+theme (light/dark/system), accent colour, and the two reminder toggles.
+Sign out lives here too.
+
+**11. Back up.** Two independent options:
+- **Menu → Cloud** → *Back up now* / *Restore from cloud* (Supabase, 100 MB
+  per account, always manual — nothing syncs in the background).
+- **Menu → Cloud** → *Export local backup (.zip)* / *Import local backup* —
+  a full offline copy of your data, including flashcards and calendar events.
+
+Everything except the first sign-in and cloud backup works with no internet.
 
 ## Features
 
@@ -69,11 +131,9 @@ lib/
                history, edit, flashcards, search, reminders, backup, cloud, profile
   shared/      reusable widgets
 test/          unit and widget tests
-docs/          Supabase schema scripts, feature docs, AI import prompt
-redesign/png/  13 phone mockups (the design source for the current UI)
 ```
 
-## Getting started
+## Getting started (contributors)
 
 Full setup — including the one secret step (Supabase keys) — is in
 [`DEVELOPING.md`](DEVELOPING.md). Short version:
@@ -90,8 +150,8 @@ No cloud values yet? Run the UI with `--dart-define=USE_FAKE_AUTH=true`
 (any username/password works, no network).
 
 **No keys live in this repository.** `config.json` is gitignored; only
-`docs/config.example.json` with placeholders is tracked, and the real values
-enter the binary exclusively via `--dart-define`.
+`config.example.json` with placeholders is tracked, and the real values enter
+the binary exclusively via `--dart-define`.
 
 ## Testing
 
@@ -108,10 +168,6 @@ All three must be clean before every commit (see [`AGENTS.md`](AGENTS.md)).
 - [`AGENTS.md`](AGENTS.md) — project scope, hard constraints, data model, and
   the phase-by-phase plan this app was built from.
 - [`DEVELOPING.md`](DEVELOPING.md) — local setup and git workflow.
-- [`docs/flashcards_ai_import.md`](docs/flashcards_ai_import.md) — how the
-  "bring your own AI" flashcard import works.
-- [`docs/supabase_schema*.sql`](docs) — cloud schema and migrations, applied
-  by the project owner in the Supabase dashboard.
 
 ## Status and license
 
