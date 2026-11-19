@@ -109,6 +109,50 @@ void main() {
     expect(blobs, [commit.blobHash]);
   });
 
+  test('saving versions moves the activity to in progress', () async {
+    final c = await _container();
+    final semesterId = await _semester(c);
+    final subjectId = await _subject(c, semesterId);
+    final activityId = await _activity(c, subjectId);
+    final files = c.read(fileRepoProvider);
+    final commits = c.read(commitRepoProvider);
+    final activities = c.read(activityRepoProvider);
+
+    // A fresh activity is a draft.
+    expect((await activities.watchById(activityId).first)?.status, 'draft');
+
+    final fileId = await files.upload(
+      activityId: activityId,
+      bytes: bytesOf('v1 content'),
+      displayName: 'essay.txt',
+    );
+    expect(
+      (await activities.watchById(activityId).first)?.status,
+      'in_progress',
+    );
+
+    await activities.updateDetails(id: activityId, status: 'final');
+    await commits.create(
+      fileId: fileId,
+      versionNo: 2,
+      message: 'Second draft',
+      blobHash: 'v2hash',
+      sizeBytes: 10,
+    );
+    expect(
+      (await activities.watchById(activityId).first)?.status,
+      'in_progress',
+    );
+
+    final v1 = (await commits.watchByFile(fileId).first).last;
+    await activities.updateDetails(id: activityId, status: 'submitted');
+    await commits.restoreAsNewCommit(fileId: fileId, fromCommitId: v1.id);
+    expect(
+      (await activities.watchById(activityId).first)?.status,
+      'in_progress',
+    );
+  });
+
   test('uploading the same content twice keeps one blob on disk', () async {
     final c = await _container();
     final semesterId = await _semester(c);

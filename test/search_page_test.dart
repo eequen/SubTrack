@@ -141,7 +141,7 @@ void main() {
     final setup = await _setup(tester);
 
     // Screen 9: search box and chips, hint before a query.
-    expect(find.text('Search'), findsNWidgets(2)); // page title + tab label
+    expect(find.text('Search'), findsOneWidget); // Search is no longer a tab.
     expect(find.text('Search this semester'), findsOneWidget);
     expect(
       find.text('Search subjects, activities, files, and commit messages.'),

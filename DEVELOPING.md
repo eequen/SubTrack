@@ -26,7 +26,7 @@ flutter doctor            # fix anything it flags
 The Supabase URL and key are **not stored in the repo** (AGENTS.md rule 8).
 Ask for the two cloud values in the group chat, then:
 
-1. Copy `docs/config.example.json` to `config.json` in the repo root
+1. Copy `config.example.json` to `config.json` in the repo root
 2. Paste the two values in
 
 `config.json` is gitignored — it will never be committed. Only the example file with placeholders is in the repo.
@@ -37,9 +37,11 @@ Ask for the two cloud values in the group chat, then:
   — this uses `.vscode/launch.json`, which points at your `config.json`
 - **Terminal:** `flutter run --dart-define-from-file=config.json`
 
-No `config.json` yet? The app still opens in **FakeAuth mode** (any
-username/password works, no cloud) — fine for UI work, useless for cloud
-backups.
+No `config.json` yet? For UI work only, run with
+`--dart-define=USE_FAKE_AUTH=true` to use **FakeAuth mode** (any
+username/password works, no cloud). Without that flag, login refuses
+credentials and tells you to rebuild with `config.json`, so a test APK
+can never silently accept fake accounts.
 
 ## Just want to test, not code?
 
@@ -49,8 +51,8 @@ that is exactly what the backup/restore flow is for.
 
 ## Cloud tables stay in one place
 
-All `docs/supabase_schema*.sql` scripts are applied by the project owner
-in the Supabase dashboard. Teammates do **not** run them.
+The Supabase schema is applied by the project owner in the Supabase
+dashboard. Teammates do **not** run anything against the cloud project.
 
 ## Git workflow (short version)
 

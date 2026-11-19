@@ -14,6 +14,7 @@ import 'package:subtrack/features/edit/editor_service.dart';
 import 'package:subtrack/features/files/file_pick.dart';
 import 'package:subtrack/features/files/file_providers.dart';
 import 'package:subtrack/features/history/commit_page.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Phase 5B edit flow: copies a version into a private working copy, opens
 /// it in an external editor, and turns the result into a new commit.
@@ -389,9 +390,9 @@ class _EditPageState extends ConsumerState<EditPage>
             const SizedBox(height: 12),
             Text(error, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _start, child: const Text('Try again')),
+            PrimaryButton(label: 'Try again', onPressed: _start),
             const SizedBox(height: 8),
-            OutlinedButton(onPressed: _back, child: const Text('Cancel')),
+            SecondaryButton(label: 'Cancel', onPressed: _back),
           ],
         ),
       );
@@ -409,61 +410,50 @@ class _EditPageState extends ConsumerState<EditPage>
                     'the history changes until you commit.',
         ),
         const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Editing v${base.versionNo}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Editing v${base.versionNo}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _displayName ?? '',
+                style: TextStyle(color: context.palette.mutedText),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'SubTrack made a private copy for this edit. Committing '
+                'creates a new version; no existing version is changed.',
+                style: TextStyle(
+                  color: context.palette.mutedText,
+                  fontSize: 13,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _displayName ?? '',
-                  style: TextStyle(color: context.palette.mutedText),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'SubTrack made a private copy for this edit. Committing '
-                  'creates a new version; no existing version is changed.',
-                  style: TextStyle(
-                    color: context.palette.mutedText,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
-        ElevatedButton.icon(
+        PrimaryButton(
+          label: 'Check for changes',
+          icon: Icons.fact_check_outlined,
+          loading: _checking,
           onPressed: _busy || _checking ? null : _checkForChanges,
-          icon: _checking
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.fact_check_outlined),
-          label: const Text('Check for changes'),
         ),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
+        SecondaryButton(
+          label: 'Open editor again',
+          icon: Icons.open_in_new,
           onPressed: _busy || _checking ? null : _openEditor,
-          icon: const Icon(Icons.open_in_new),
-          label: const Text('Open editor again'),
         ),
         const SizedBox(height: 8),
-        OutlinedButton(
+        SecondaryButton(
+          label: 'I saved it elsewhere, pick the file',
           onPressed: _busy || _checking ? null : _pickElsewhere,
-          child: const Text('I saved it elsewhere, pick the file'),
         ),
         const SizedBox(height: 8),
         TextButton(

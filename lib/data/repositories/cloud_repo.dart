@@ -204,7 +204,10 @@ class CloudRepo {
     return BackupContents(
       semesters: semesters.length,
       subjects: subjects.length,
-      activities: activities.length,
+      activities: activities
+          .where((activity) => activity.kind == 'activity')
+          .length,
+      lessons: activities.where((activity) => activity.kind == 'lesson').length,
       files: files.length,
       commits: commits.length,
     );
@@ -388,6 +391,7 @@ class CloudRepo {
     id: _int(row['id']),
     subjectId: _int(row['subject_id']),
     title: row['title'] as String,
+    kind: (row['kind'] as String?) ?? 'activity',
     notes: row['notes'] as String,
     deadline: _dateOrNull(row['deadline']),
     status: row['status'] as String,
@@ -500,6 +504,7 @@ class CloudRepo {
     'id': activity.id,
     'subject_id': activity.subjectId,
     'title': activity.title,
+    'kind': activity.kind,
     'notes': activity.notes,
     'deadline': activity.deadline == null ? null : _iso(activity.deadline!),
     'status': activity.status,

@@ -7,6 +7,7 @@ import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/brand_logo.dart';
 
 /// The create-account screen is taller than the default widget-test
 /// surface and ListViews do not build offscreen children, so those tests
@@ -50,8 +51,22 @@ void main() {
   testWidgets('login screen shows fields and offline note', (tester) async {
     final db = await _pumpApp(tester);
 
-    expect(find.text('SubTrack'), findsOneWidget);
-    expect(find.text('Email or username'), findsOneWidget);
+    expect(
+      tester
+          .widget<MaterialApp>(find.byType(MaterialApp))
+          .debugShowCheckedModeBanner,
+      isFalse,
+    );
+    expect(find.text('SubTrack'), findsNothing);
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.byType(BrandLogo), findsNWidgets(2));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is BrandLogo && widget.variant == BrandLogoVariant.wordmark,
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Password'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Log in'), findsOneWidget);
     expect(
@@ -85,8 +100,8 @@ void main() {
 
     expect(find.text('Welcome,'), findsOneWidget);
     expect(find.text('No semester yet'), findsOneWidget);
-    expect(find.text('Semesters'), findsOneWidget);
-    expect(find.text('Start here'), findsOneWidget);
+    expect(find.text('Add your first semester'), findsOneWidget);
+    expect(find.text('Quick access'), findsNothing);
     await _close(db, tester);
   });
 

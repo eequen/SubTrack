@@ -9,9 +9,12 @@ import 'package:subtrack/data/repositories/activity_repo.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 import 'package:subtrack/features/activities/activity_dialog.dart';
 import 'package:subtrack/features/activities/activity_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/features/subjects/subject_providers.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 5 from AGENTS.md section 14: Activities of one subject.
 class ActivitiesPage extends ConsumerStatefulWidget {
@@ -64,51 +67,88 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _changeStatus(Activity activity) async {
+    final status = await showStatusSheet(
+      context,
+      currentStatus: activity.status,
+    );
+    if (status == null || status == activity.status || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: status);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      await _syncReminders();
+    } catch (error) {
+      _snack('Could not update status: $error');
+    }
+  }
+
+  Future<void> _createActivity() async {
     final result = await showNewActivityDialog(context);
-    if (result == null) return;
-    await ref
-        .read(activityRepoProvider)
-        .create(
-          subjectId: _subjectId,
-          title: result.title,
-          notes: result.notes,
-          deadline: result.deadline,
-          status: result.status,
-        );
-    await _syncReminders(askPermission: _isFuture(result.deadline));
+    if (result == null || !mounted) return;
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .create(
+            subjectId: _subjectId,
+            title: result.title,
+            notes: result.notes,
+            deadline: result.deadline,
+            status: result.status,
+          );
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      await _syncReminders(askPermission: _isFuture(result.deadline));
+    } catch (error) {
+      _snack('Could not create activity: $error');
+    }
   }
 
   Future<void> _runAction(Activity activity) async {
     final repo = ref.read(activityRepoProvider);
     final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () => Navigator.of(context).pop('edit'),
+      isScrollControlled: true,
+      builder: (context) => SheetScaffold(
+        title: 'Activity actions',
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit'),
+                  onTap: () => Navigator.of(context).pop('edit'),
+                ),
+                ListTile(
+                  leading: Icon(
+                    activity.isArchived
+                        ? Icons.unarchive_outlined
+                        : Icons.archive_outlined,
+                  ),
+                  title: Text(activity.isArchived ? 'Unarchive' : 'Archive'),
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pop(activity.isArchived ? 'unarchive' : 'archive'),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: context.palette.overdue,
+                  ),
+                  title: Text(
+                    'Delete',
+                    style: TextStyle(color: context.palette.overdue),
+                  ),
+                  onTap: () => Navigator.of(context).pop('delete'),
+                ),
+              ],
             ),
-            ListTile(
-              leading: Icon(
-                activity.isArchived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
-              ),
-              title: Text(activity.isArchived ? 'Unarchive' : 'Archive'),
-              onTap: () =>
-                  Navigator.of(context)
-                      .pop(activity.isArchived ? 'unarchive' : 'archive'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () => Navigator.of(context).pop('delete'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -131,22 +171,28 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
             status: result.status,
           );
           await repo.setDeadline(activity.id, result.deadline);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
           await _syncReminders(askPermission: _isFuture(result.deadline));
         }
       case 'archive':
         await repo.setArchived(activity.id, true);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
         await _syncReminders();
       case 'unarchive':
         await repo.setArchived(activity.id, false);
+        await ref.read(localBackupPendingProvider.notifier).markPending();
         await _syncReminders();
       case 'delete':
+        final backupPending = ref.read(localBackupPendingProvider);
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete activity?'),
             content: Text(
               'This deletes "${activity.title}", its files, and versions. '
-              'This cannot be undone.',
+              'This cannot be undone.'
+              '${backupPending ? '\n\nRecent changes have not been backed up. '
+                        'Back up now first if you may need to recover them.' : ''}',
             ),
             actions: [
               TextButton(
@@ -162,6 +208,7 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
         );
         if (confirmed == true) {
           await repo.delete(activity.id);
+          await ref.read(localBackupPendingProvider.notifier).markPending();
           await _syncReminders();
         }
     }
@@ -203,7 +250,6 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -220,19 +266,68 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              if (items.isNotEmpty)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _subjectId > 0 ? _createActivity : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New activity'),
+                  ),
+                ),
+              const SizedBox(height: 8),
               Expanded(
                 child: activities.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading activities...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load activities: $e'),
                   data: (_) {
                     if (items.isEmpty) {
-                      return const Center(child: Text('No activities yet.'));
+                      return Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 340),
+                          child: DashedCard(
+                            borderColor: context.palette.accentText,
+                            onTap: _createActivity,
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_circle_outline,
+                                    size: 42,
+                                    color: context.palette.accentText,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Add your first activity',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Start tracking work for this subject.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: context.palette.mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
                     }
                     if (filtered.isEmpty) {
-                      return const Center(
-                        child: Text('No activities match this filter.'),
+                      return const EmptyState(
+                        icon: Icons.filter_list,
+                        title: 'No activities match this filter.',
+                        message:
+                            'Choose another status to see more activities.',
                       );
                     }
                     return ListView.separated(
@@ -241,15 +336,11 @@ class _ActivitiesPageState extends ConsumerState<ActivitiesPage> {
                       itemBuilder: (context, index) => _ActivityCard(
                         item: filtered[index],
                         onAction: _runAction,
+                        onStatus: _changeStatus,
                       ),
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _subjectId <= 0 ? null : _create,
-                child: const Text('+ New activity'),
               ),
             ],
           ),
@@ -313,10 +404,15 @@ class _SubjectHeader extends StatelessWidget {
 }
 
 class _ActivityCard extends ConsumerWidget {
-  const _ActivityCard({required this.item, required this.onAction});
+  const _ActivityCard({
+    required this.item,
+    required this.onAction,
+    required this.onStatus,
+  });
 
   final ActivityListItem item;
   final Future<void> Function(Activity activity) onAction;
+  final Future<void> Function(Activity activity) onStatus;
 
   String get _filesLabel {
     final n = item.fileCount;
@@ -329,50 +425,57 @@ class _ActivityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = item.activity;
-    return Card(
-      child: Opacity(
-        opacity: activity.isArchived ? 0.6 : 1,
-        child: ListTile(
-          title: Text(
-            activity.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 6),
-              Row(
+    return Opacity(
+      opacity: activity.isArchived ? 0.65 : 1,
+      child: AppCard(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        onTap: () => context.push('/activities/${activity.id}'),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  StatusChip(status: activity.status),
-                  if (activity.deadline != null) ...[
-                    const SizedBox(width: 8),
-                    DeadlineChip(deadline: activity.deadline!),
-                  ],
-                  if (activity.isArchived) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      'Archived',
-                      style: TextStyle(
-                        color: context.palette.mutedText,
-                        fontSize: 12,
+                  Text(
+                    activity.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      StatusChip(
+                        status: activity.status,
+                        onTap: () => onStatus(activity),
                       ),
-                    ),
-                  ],
+                      if (activity.deadline != null)
+                        DeadlineChip(deadline: activity.deadline!),
+                      if (activity.isArchived)
+                        Text(
+                          'Archived',
+                          style: TextStyle(
+                            color: context.palette.mutedText,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _filesLabel,
+                    style: TextStyle(color: context.palette.mutedText),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                _filesLabel,
-                style: TextStyle(color: context.palette.mutedText),
-              ),
-            ],
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Activity actions',
-            onPressed: () => onAction(activity),
-          ),
-          onTap: () => context.push('/activities/${activity.id}'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Activity actions',
+              onPressed: () => onAction(activity),
+            ),
+          ],
         ),
       ),
     );

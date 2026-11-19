@@ -51,13 +51,13 @@ void main() {
     final db = await _pumpApp(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Profile'), findsNWidgets(2)); // title + nav tab label
+    expect(find.text('Profile'), findsOneWidget); // screen title
     expect(find.text('@kent@gmail.com'), findsOneWidget);
     expect(find.text('APPEARANCE'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
-    expect(find.byKey(const ValueKey('accent-pink')), findsOneWidget);
+    expect(find.byKey(const ValueKey('accent-purple')), findsOneWidget);
     expect(find.text('NOTIFICATIONS'), findsOneWidget);
     expect(find.text('Deadline reminders'), findsOneWidget);
     expect(find.text('Weekly backup reminder'), findsOneWidget);
@@ -70,19 +70,30 @@ void main() {
     await closeDatabase(tester, db);
   });
 
-  testWidgets('picking the pink accent re-themes and saves', (tester) async {
+  testWidgets('picking the purple accent re-themes and saves', (tester) async {
     final db = await _pumpApp(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('accent-pink')));
+    await tester.tap(find.byKey(const ValueKey('accent-purple')));
     await tester.pumpAndSettle();
 
     expect(
       _materialApp(tester).theme!.colorScheme.primary,
-      const Color(0xFFC2185B),
+      const Color(0xFF7A3FB5),
     );
-    expect((await _profile(db)).accentKey, 'pink');
+    expect((await _profile(db)).accentKey, 'purple');
 
+    await closeDatabase(tester, db);
+  });
+
+  testWidgets('Profile cloud shortcut opens the Cloud screen', (tester) async {
+    final db = await _pumpApp(tester);
+
+    await tester.tap(find.text('Cloud backup and restore'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cloud backup'), findsOneWidget);
+    expect(find.text('Cloud backup and restore'), findsNothing);
     await closeDatabase(tester, db);
   });
 

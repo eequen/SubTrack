@@ -154,27 +154,32 @@ class _ActivityDialogState extends State<_ActivityDialog> {
               decoration: const InputDecoration(labelText: 'Title'),
               maxLength: 80,
             ),
-            const SizedBox(height: 4),
-            const Text('Status'),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final status in ActivityRepo.statuses)
-                  ChoiceChip(
-                    label: Text(statusLabel(status)),
-                    selected: _status == status,
-                    selectedColor: statusColors(status, context.palette).$2,
-                    labelStyle: TextStyle(
-                      color: _status == status
-                          ? statusColors(status, context.palette).$1
-                          : null,
+            // New activities always start as drafts. Status moves forward
+            // automatically when versions are saved, and Final/Submitted are
+            // chosen from the finish sheet; only edit keeps a manual override.
+            if (_isEdit) ...[
+              const SizedBox(height: 4),
+              const Text('Status'),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final status in ActivityRepo.statuses)
+                    ChoiceChip(
+                      label: Text(statusLabel(status)),
+                      selected: _status == status,
+                      selectedColor: statusColors(status, context.palette).$2,
+                      labelStyle: TextStyle(
+                        color: _status == status
+                            ? statusColors(status, context.palette).$1
+                            : null,
+                      ),
+                      onSelected: (_) => setState(() => _status = status),
                     ),
-                    onSelected: (_) => setState(() => _status = status),
-                  ),
-              ],
-            ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -215,7 +220,7 @@ class _ActivityDialogState extends State<_ActivityDialog> {
               maxLines: 3,
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: TextStyle(color: context.palette.overdue)),
           ],
         ),
       ),

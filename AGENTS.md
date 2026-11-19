@@ -228,6 +228,8 @@ test/
 
 **activities**: `id`, `subject_id`, `title`, `notes`, `deadline` (nullable), `status` (`draft`, `in_progress`, `final`, `submitted`), `is_archived`, `created_at`
 
+**calendar_events** (local only; never included in Supabase cloud backup): `id`, `semester_id`, `title`, `starts_at`, `ends_at` (nullable), `notes`, `created_at`. Events are standalone, non-recurring entries shown with the selected semester's calendar. Local ZIP backup includes them.
+
 **files**: `id`, `activity_id`, `display_name`, `current_commit_id`, `created_at`
 
 **commits**: `id`, `file_id`, `version_no`, `message`, `blob_hash` (SHA-256), `size_bytes`, `mime_type`, `kind` (`upload`, `edit`, `restore`), `based_on_commit_id` (nullable; the version that was restored or edited), `created_at`
@@ -240,6 +242,7 @@ test/
 
 **Rules**
 - `version_no` increases by 1 per file.
+- Activity status is automatic: a new activity starts `draft`, saving any version (upload, edit, or restore) sets `in_progress`, and `final` / `submitted` are chosen from the Finish version sheet. A later version moves the activity back to `in_progress`.
 - `files.current_commit_id` always points to the latest commit.
 - Deleting a blob is only allowed when no commit references its hash.
 - The username cannot be changed after sign-up. The display name and profile photo can be changed. The photo is stored on the device only and is not backed up.
@@ -259,7 +262,7 @@ Each phase has a goal, tasks, and a "done when" checklist. Do not start a phase 
 
 Tasks:
 1. Complete Phase 0 (repo, branches, packages).
-2. Set up `app/` with the theme (Material 3, colors from section 14), `go_router` with the routes in section 14, and the bottom navigation (Search, Home, Profile, with Home in the middle).
+2. Set up `app/` with the theme (Material 3, colors from section 14), `go_router` with the routes in section 14, and the bottom navigation (Cloud, Subjects, Home in the middle, Calendar, Profile).
 3. Create an `AuthService` interface (`signIn`, `signUp`, `signOut`, `currentUser`) and a `FakeAuthService` that accepts any email and password. A router redirect sends signed-out users to `/login`. The real Supabase version comes in Phase 5; until then the screens and flow are built against the fake.
 4. Create the drift database with the tables in section 8 (including `semesters`) and a first migration. Name the database file per user id.
 5. Create empty repository classes with method signatures only.
@@ -363,10 +366,10 @@ Done when:
 
 Tasks:
 
-1. Bottom navigation: Search, Home (middle), Profile. Hide it on the screens listed in section 14.
-2. Home dashboard: welcome with the display name and a semester pill; Due very soon (next 3 not-submitted activities with deadlines, overdue first); Quick access icons (Semesters, Subjects, Activities, Calendar); This semester progress bar (counts per status). New-user state when no semester exists: Semesters icon highlighted, other icons disabled.
+1. Bottom navigation: Cloud, Subjects, Home (middle), Calendar, Profile. Hide it on the screens listed in section 14.
+2. Home dashboard: welcome with the display name and a semester pill; Due very soon (next 3 not-submitted activities with deadlines, overdue first); upcoming standalone calendar events; This semester progress bar (counts per status).
 3. All activities (`/activities`): every activity in the chosen semester with filter chips (All, Due soon, Draft, In progress, Final, Submitted). Home's See all opens it on Due soon.
-4. Calendar (`/calendar`): month view with markers on deadline days; tapping a day lists that day's activities.
+4. Calendar (`/calendar`): month view with markers for activity deadlines and standalone events; tapping a day lists its activities and events. Events have a title, start date/time, optional end date/time, and optional notes; they can be added, edited, and deleted locally.
 5. Profile and Edit profile: display name, username (read-only), photo (camera, gallery, or remove). Create the `profiles` table.
 6. Settings on the Profile screen: theme (Light, Dark, System) and accent (indigo, teal, orange, purple), applied immediately and saved; deadline reminders and weekly backup reminder toggles wired to `flutter_local_notifications`; Cloud backup and restore row opens `/cloud`; Change password; Sign out; Delete cloud data (confirm by typing the username); app version.
 7. Remove the old Sign out buttons from Semesters and Cloud, and the Change button from Subjects (section 14, rule 13).
@@ -492,11 +495,11 @@ If something seems needed that is on this list, stop and ask the team.
 
 ## 14. Screens and routes
 
-The app was designed as phone mockups (390 x 844) on a design canvas. Export them as PNGs into `docs/design/` (for example `01-login.png`). If you can view images, look at them. **This section is the source of truth for behavior.** If an image and this text disagree, ask before building. Calendar and All activities have no mockup yet; follow the text.
+The app was designed as phone mockups (390 x 844) on a design canvas. All activities, Create account, Edit flow, and Edit profile follow the text below where no dedicated mockup exists. **This section is the source of truth for behavior.** If an image and this text disagree, ask before building.
 
-**Flow:** Login (or Create account) > Home. A new student has no semester, so Home highlights the Semesters icon > Semesters > New semester > Home. After that: Home > Subjects > Activities > Activity files > Version history, Edit, or Commit new version. Search and Profile are bottom tabs next to Home.
+**Flow:** Login (or Create account) > Home. A new student taps the semester pill or the dashed card to choose or create a semester. After that: Home > Subjects > Activities > Activity files > Version history, Edit, or Commit new version. Search opens from the header on Home or Subjects.
 
-**Bottom navigation:** Search, Home (middle), Profile. Visible on Home, Subjects, Activities, All activities, Calendar, Activity files, Version history, Search, Profile, and Cloud backup. Hidden on Login, Create account, Semesters, New semester, Commit new version, and Edit profile.
+**Bottom navigation:** Cloud, Subjects, Home (center), Calendar, Profile. Home is the selected/center destination; there is no global `+` button. Search is opened from the search icons in the Home and Subjects headers; `/search` remains available. Create subjects from the dashed New subject tile, activities from the centered empty-state action or New activity action on Activities, and files from the Add file button on Activity files. The Cloud backup row on Profile switches to the Cloud tab. Visible on Home, Subjects, Activities, All activities, Calendar, Activity files, Version history, Search, Profile, and Cloud backup. Hidden on Login, Create account, Semesters, New semester, Commit new version, and Edit profile.
 
 | Route | Screen |
 |---|---|
@@ -524,21 +527,21 @@ Redirects: signed-out users go to `/login`; signed-in users go to `/home`. Subje
 
 1. **Login:** app name and tagline "Every subject, every version, safely kept." Username and password fields, Log in (primary), Create account (secondary), and the note "Sign in once. After that, the app works offline." There is no Forgot password link.
 2. **Create account:** Display name, Username (3 to 20 characters: letters, numbers, underscore; must be unique), Password (at least 8 characters), Confirm password. Create account (primary) and a Log in link. Success goes to `/home`.
-3. **Home (returning):** top row shows "Welcome back," with the display name and a round profile button (opens Profile), then a pill with the chosen semester ("1st Semester - SY 2026-2027"). **Due very soon:** the next 3 not-submitted activities with a deadline in this semester, soonest first, overdue first of all (shown in red as Overdue); each card shows title, subject, and when it is due; See all opens `/activities?filter=due`. **Quick access:** four icons: Semesters, Subjects, Activities, Calendar. **This semester:** a segmented bar and counts of activities per status; tapping it opens `/activities`.
-4. **Home (new user):** same top area with "Welcome," and an amber pill "No semester yet". A dashed card "Add your first semester". Due very soon shows an empty message. In Quick access the Semesters icon is highlighted with a ring and labelled "Start here"; the other icons are disabled. Creating a semester returns to the returning state.
-5. **Choose semester:** back to Home, one card per semester (term and school year, Current chip on the last chosen one, subject and file counts, date range). Tapping a card makes it current and goes to `/home`. + New semester. Empty state when none exist. No Sign out here.
-6. **New semester:** Semester (1st, 2nd, Summer), School year (year picker; shows `2026-2027` style), Start date and End date (date pickers). Create semester and Cancel. After creating, go to `/home`.
-7. **Subjects:** header shows "<term> - SY <year>" above "My Subjects" (no Change button; use the Semesters icon). Due soon card, subject cards (colored badge with initials, name, activity and file counts), + New subject.
-8. **Activities:** back button, subject name, count, filter chips (All, Draft, In progress, Final, Submitted; the row scrolls sideways), activity cards (title, status chip, due date in amber, files and latest version). + New activity.
-9. **All activities:** same cards as Activities but across all subjects in the semester, each showing its subject name, plus the chip Due soon (sorted by deadline).
-10. **Calendar:** month view; days with deadlines have a marker; tapping a day lists that day's activities below the grid.
-11. **Activity files:** back button, title, status chip, due date with reminder, notes. File cards: name, latest version, last commit message, time, size, buttons Open, Edit, History, Commit. A file with an unfinished edit session shows an Editing badge. + Add file (storage or camera).
-12. **Version history:** banner "Restoring creates a new version. Nothing is deleted." Cards newest first: "vN - message", Current chip on the latest, date and size, buttons Open and Edit on every row, plus Restore on every row except the current one. Restore commits read "Restored from vX" and edit commits read "Edited from vX".
-13. **Commit new version:** shows the next version number, the picked file with Change file, a hash banner ("New content detected - SHA-256 ..." or a warning when identical to the current version), a required message (max 72 characters, counter), Commit as vN, Cancel. When opened after an edit, the banner reads "Changes detected from your edit of vN" and the message is prefilled.
+3. **Home (returning):** header shows the wordmark, a search icon, "Welcome back" and the display name, a round Profile button, and a pill for the chosen semester ("1st Semester - SY 2026-2027"). Tapping the pill opens the semester bottom sheet without leaving Home. **This semester:** an overlapping card with a segmented progress bar and counts per status; tapping it opens `/activities`. **Due very soon:** the next 3 not-submitted activities with deadlines in this semester, soonest first, overdue first of all (shown in red as Overdue); each card shows title, subject, and when it is due; See all opens `/activities?filter=due`. **Upcoming events:** the next three standalone calendar events in the semester, with their start date and time; Calendar opens `/calendar`. The bottom navigation replaces Quick access.
+4. **Home (new user):** same header with "Welcome," and an amber pill "No semester yet". A dashed card says "Add your first semester". Due very soon shows an empty message. The semester pill opens the semester sheet. Creating a semester returns to the returning state.
+5. **Choose semester:** a modal bottom sheet listing semester cards (term and school year, selected semester outlined with a check, date range, subject and file counts). Tapping a card makes it current and closes the sheet. Edit toggles deletion controls; deleting still requires confirmation. + New semester. `/semesters` opens the same chooser content for deep links. Empty state when none exist. No Sign out here.
+6. **New semester:** segmented control for 1st, 2nd, or Summer; School year uses − and + stepper controls (for example `2026 – 2027`); Start date and End date cards use date pickers and End must be after Start. Show a live preview and Create semester / Cancel. After creating, go to `/home`.
+7. **Subjects:** header shows the semester pill and a search icon above "My Subjects" (no Change button; use the Semesters pill). Two-column grid of subject cards with colored initials tiles, activity counts, and progress bars by activity status, plus a dashed New subject tile. The overflow menu keeps rename, archive, and delete. No Due soon card.
+8. **Activities:** back button, subject name, count, and horizontally scrollable filter chips (All, Draft, In progress, Final, Submitted). With no activities, show a prominent centered Add your first activity card. Otherwise show a centered New activity action. Each activity card shows its status chip, due date in amber, file count, and latest version. Tapping the status chip opens a Set status sheet with all four statuses and a check on the current one; selecting a status updates it immediately. Tapping the rest of the card opens Activity files. The activity overflow menu uses the same rounded card surface as other sheets.
+9. **All activities:** same cards and status sheet as Activities across all subjects in the semester, each showing its subject name, plus the Due soon chip (sorted by deadline). New activity asks the student to choose a subject first.
+10. **Calendar:** month view; activity deadlines have amber markers and standalone events have brand-blue markers. Tapping a day lists its activities and events. Add event opens a form for a title, start date/time, optional end date/time, and optional notes; existing events can be edited or deleted. Events are local-only, scoped to the selected semester, included in local ZIP backups, and excluded from cloud backup and restore.
+11. **Activity files:** back button and title, a four-segment status selector (Draft, In progress, Final, Submitted) that updates the status, deadline card with reminder note, and notes. File cards show name, latest version, last commit message, time, and size, with Open, Edit, History, Commit, and Finish actions. Finish opens the Save version sheet: slide down for Final, slide up for Save & submit. A file with an unfinished edit session shows an Editing badge. Bottom + Add file (storage or camera).
+12. **Version history:** banner "Restoring creates a new version. Nothing is deleted." Cards newest first: "vN - message", Current chip on the latest, date and size, buttons Open and Edit on every row, plus Restore on every row except the current one. The current card also has Finish, and pressing the current card opens the same Save version sheet. Restore commits read "Restored from vX" and edit commits read "Edited from vX".
+13. **Commit new version:** shows the next version number, the picked file with Change file, a hash banner ("New content detected - SHA-256 ..." or a warning when identical to the current version), a required message (max 72 characters, counter), Commit as vN, Cancel. When opened after an edit, the banner reads "Changes detected from your edit of vN" and the message is prefilled. Committing saves a version and moves the activity to In progress; use Finish for Final or Submitted.
 14. **Search:** search box, chips (All, Files, Activities, Commits), grouped results with type label, title, and path context. Searches only the chosen semester.
 15. **Profile and settings:** profile card (photo or initial, display name, @username, Edit). **Appearance:** theme (Light, Dark, System) and accent (indigo, teal, orange, purple). **Notifications:** Deadline reminders (1 day before) and Weekly backup reminder toggles. **Cloud backup and restore** row (shows last backup; opens `/cloud`). **Account:** Change password, Sign out, Delete cloud data (confirm by typing the username). Footer shows the app version.
 16. **Edit profile:** photo (Take photo, Choose from gallery, Remove photo), Display name (editable), Username (read-only, "Username can't be changed"), Save changes, Cancel.
-17. **Cloud backup:** signed-in username, storage bar "x / 100 MB", last backup time, Back up now, Restore from cloud, Export local backup (.zip), checkboxes "Back up on Wi-Fi only" (default on) and "Include older versions" (default off), and the note that backup is manual. No Sign out here.
+17. **Cloud backup:** signed-in username, gradient storage card with "x / 100 MB" and last backup time, Back up now, Restore from cloud, Export local backup (.zip), checkboxes "Back up on Wi-Fi only" (default on) and "Include older versions" (default off), and the note that cloud backup is manual. Keep the existing Import local backup (.zip) action. No Sign out here.
 
 ### Design tokens
 
@@ -546,14 +549,16 @@ Accent changes primary buttons, links, the active tab, and the avatar background
 
 | Token | Light | Dark |
 |---|---|---|
-| Background | `#F4F6FB` | `#0F1220` |
-| Card (border) | `#FFFFFF` (`#E1E5F0`) | `#1A1F33` (`#2A3050`) |
-| Text / muted text | `#14182B` / `#5B6280` | `#EDEFF8` / `#A3AACB` |
-| Accent: indigo (default) | `#3B4BDB` | `#8E99FF` for text and links, `#3B4BDB` for button fills |
+| Background | `#F3F7FD` | `#0B1226` |
+| Card (border) | `#FFFFFF` (`#E1E8F3`) | `#141C36` (`#27325A`) |
+| Text / muted text | `#0E1B3D` / `#566686` | `#EDF1FB` / `#A3AFCC` |
+| Navy / brand blue / sky | `#12307F` / `#2077BD` / `#55ABEE` | same |
+| Accent: indigo key (default) | `#2077BD` | `#70B7F0` for text and links, `#2077BD` for button fills |
 | Accent: teal / orange / purple | `#0B7A6B` / `#B4530A` / `#7A3FB5` | lighten for text and links; keep fills with white text |
-| Deadline amber / overdue red | `#9A5B00` on `#FFF1D6` / `#B42318` | use the same hues at 20% opacity backgrounds with lighter text |
-| Status chips (Draft, In progress, Final, Submitted) | `#444B66` on `#ECEEF5`, `#2D3AB5` on `#E8EAFD`, `#0B6B5F` on `#DDF5F0`, `#2F6B16` on `#E4F4DC` | foreground color at 20% opacity as background with a lighter tint for text |
-| Radius / sizes | cards 14, buttons 12; primary height 48, secondary 44; minimum touch target 44; side padding 20 | same |
-| Font | system font | same |
+| Deadline amber / overdue red | `#9A5B00` on `#FFF0DC` / `#B42318` on `#FDE8E6` | use the same hues at 20% opacity backgrounds with lighter text |
+| Status chips (Draft, In progress, Final, Submitted) | `#475569` on `#E8EDF5`, `#9A4B00` on `#FFF0DC`, `#1B4FB8` on `#E3EDFF`, `#0B6B4F` on `#DDF5EA` | foreground color at 20% opacity as background with a lighter tint for text |
+| Radius / sizes | cards 20 with soft shadow; buttons 16; primary height 52, secondary 44; minimum touch target 44; side padding 20; sheets 28 top radius | same |
+| Header | 160° gradient `#12307F` to `#2077BD`, bottom radius 32 | same |
+| Font | bundled Plus Jakarta Sans (500, 700, 800) | same |
 
 Check text contrast (at least 4.5:1) in both themes before merging any screen.

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:subtrack/app/providers.dart';
+import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/subject_repo.dart';
 
 final subjectRepoProvider = Provider<SubjectRepo>((ref) {
@@ -11,4 +12,8 @@ final subjectsProvider = StreamProvider.family<List<SubjectListItem>, int>((
   semesterId,
 ) {
   return ref.watch(subjectRepoProvider).watchWithCounts(semesterId);
+});
+
+final subjectProvider = StreamProvider.family<Subject?, int>((ref, id) {
+  return ref.watch(subjectRepoProvider).watchById(id);
 });

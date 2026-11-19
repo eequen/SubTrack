@@ -30,18 +30,28 @@ class SubjectRepo {
   }
 
   /// Active subjects first, then archived, each sorted by name.
+  ///
+  /// Activity counts include only real activities, while file counts include
+  /// files in lesson folders too.
   Stream<List<SubjectListItem>> watchWithCounts(int semesterId) {
-    final activityCount = db.activities.id.count(distinct: true);
+    final activityOwner = db.alias(db.activities, 'activity_owner');
+    final fileOwner = db.alias(db.activities, 'file_owner');
+    final activityCount = activityOwner.id.count(distinct: true);
     final fileCount = db.files.id.count(distinct: true);
     final query =
         db.select(db.subjects).join([
             leftOuterJoin(
-              db.activities,
-              db.activities.subjectId.equalsExp(db.subjects.id),
+              activityOwner,
+              activityOwner.subjectId.equalsExp(db.subjects.id) &
+                  activityOwner.kind.equals('activity'),
+            ),
+            leftOuterJoin(
+              fileOwner,
+              fileOwner.subjectId.equalsExp(db.subjects.id),
             ),
             leftOuterJoin(
               db.files,
-              db.files.activityId.equalsExp(db.activities.id),
+              db.files.activityId.equalsExp(fileOwner.id),
             ),
           ])
           ..where(db.subjects.semesterId.equals(semesterId))

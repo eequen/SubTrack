@@ -8,6 +8,8 @@ import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
+import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/status_sheet.dart';
 
 /// Screen 9: All activities. Chips filter across subjects; due soon keeps
 /// overdue items; the list sorts by deadline with no-deadline last.
@@ -142,6 +144,30 @@ void main() {
     expect(find.text('Essay Next Week'), findsOneWidget);
     expect(find.text('Overdue Worksheet'), findsOneWidget);
     expect(find.text('Submitted Report'), findsNothing);
+    await db.close();
+  });
+
+  testWidgets('status chip updates an activity from the all-activities list', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+    await seedData();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(StatusChip).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Set status'), findsOneWidget);
+
+    final sheet = find.byType(StatusSheet);
+    await tester.tap(find.descendant(of: sheet, matching: find.text('Final')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(StatusChip, 'Final'), findsOneWidget);
     await db.close();
   });
 }

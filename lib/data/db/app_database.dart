@@ -30,6 +30,10 @@ class Activities extends Table {
   IntColumn get subjectId =>
       integer().references(Subjects, #id, onDelete: KeyAction.cascade)();
   TextColumn get title => text()();
+
+  /// `activity` or `lesson`. Lessons are subject-level folders that reuse
+  /// the same files and version history, without deadlines or statuses.
+  TextColumn get kind => text().withDefault(const Constant('activity'))();
   TextColumn get notes => text().withDefault(const Constant(''))();
   DateTimeColumn get deadline => dateTime().nullable()();
 
@@ -114,6 +118,43 @@ class Profiles extends Table {
   Set<Column> get primaryKey => {userId};
 }
 
+/// A flashcard deck belongs to one subject. Decks and cards stay on this
+/// device and are only included in the local `.zip` backup.
+class Decks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get subjectId =>
+      integer().references(Subjects, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+
+  /// `manual` or `ai_import`.
+  TextColumn get source => text().withDefault(const Constant('manual'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// One flashcard. Position keeps the order the student sees.
+@DataClassName('DbCard')
+class Cards extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get deckId =>
+      integer().references(Decks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get front => text()();
+  TextColumn get back => text()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// Standalone calendar events are device-local and are not sent to Supabase.
+class CalendarEvents extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get semesterId =>
+      integer().references(Semesters, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text()();
+  DateTimeColumn get startsAt => dateTime()();
+  DateTimeColumn get endsAt => dateTime().nullable()();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 @DriftDatabase(
   tables: [
     Semesters,
@@ -123,6 +164,9 @@ class Profiles extends Table {
     Commits,
     EditSessions,
     Profiles,
+    CalendarEvents,
+    Decks,
+    Cards,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -144,7 +188,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor _local(String name) => driftDatabase(name: name);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -174,6 +218,16 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
           await m.createTable(editSessions);
+        }
+        if (from < 4) {
+          await m.createTable(calendarEvents);
+        }
+        if (from < 5) {
+          // v5: subject lessons share the activities table, and flashcards
+          // are local-only decks/cards.
+          await m.addColumn(activities, activities.kind);
+          await m.createTable(decks);
+          await m.createTable(cards);
         }
       },
       beforeOpen: (details) async {

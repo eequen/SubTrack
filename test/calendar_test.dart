@@ -8,14 +8,13 @@ import 'package:subtrack/app/app.dart';
 import 'package:subtrack/app/providers.dart';
 import 'package:subtrack/data/db/app_database.dart';
 import 'package:subtrack/data/repositories/activity_repo.dart';
+import 'package:subtrack/data/repositories/calendar_event_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/auth/auth_service.dart';
 import 'package:subtrack/features/dashboard/calendar_page.dart';
 
-/// Screen 10: Calendar. The month grid marks days with deadlines, tapping
-/// a day lists its activities, and past months navigate with the arrows.
-/// Deadline days stay visible for submitted and past activities; archived
-/// ones never appear.
+/// Calendar marks activity deadlines and standalone events. Past and
+/// submitted activities remain visible; archived ones never appear.
 void main() {
   test(
     'the deadlines query keeps past and submitted but not archived',
@@ -210,21 +209,30 @@ void main() {
             isArchived: const Value(true),
           ),
         );
+    await CalendarEventRepo(db).create(
+      semesterId: semesterId,
+      title: 'Science fair',
+      startsAt: DateTime(now.year, now.month, 15, 10),
+      endsAt: DateTime(now.year, now.month, 15, 12),
+      notes: 'Bring the poster.',
+    );
     await tester.pumpAndSettle();
 
     // The current month, its deadline marker, and the bottom bar.
     expect(find.text(DateFormat('MMMM yyyy').format(now)), findsOneWidget);
-    expect(find.text('2 deadlines'), findsOneWidget);
+    expect(find.text('2 deadlines · 1 event'), findsOneWidget);
     expect(find.byKey(ValueKey(calendarDayKey(thisMonthDay))), findsOneWidget);
     expect(find.byKey(calendarMarkerKey(thisMonthDay)), findsOneWidget);
     expect(find.byKey(calendarMarkerKey(nextMonthDay)), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('nav-menu')), findsOneWidget);
 
     // A chosen day lists only that day's activity, with its subject and
     // status; archived activities never show.
     await tester.tap(find.byKey(ValueKey(calendarDayKey(thisMonthDay))));
     await tester.pumpAndSettle();
     expect(find.text('Problem Set 3'), findsOneWidget);
+    expect(find.text('Science fair'), findsOneWidget);
+    expect(find.text('Bring the poster.'), findsOneWidget);
     expect(find.text('Chemistry'), findsOneWidget);
     expect(find.text('Final'), findsOneWidget);
     expect(find.text('Lab Report'), findsNothing);
@@ -246,6 +254,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Lab Report'), findsOneWidget);
     expect(find.text('Problem Set 3'), findsNothing);
+
+    await tester.tap(find.byTooltip('Add event'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Study group');
+    await tester.tap(find.text('Add event'));
+    await tester.pumpAndSettle();
+    expect(find.text('Study group'), findsOneWidget);
+    expect((await db.select(db.calendarEvents).get()), hasLength(2));
 
     await db.close();
   });

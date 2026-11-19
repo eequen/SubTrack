@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:subtrack/app/theme.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Bytes and name of a file the user picked, before it is stored.
 class PickedUpload {
@@ -19,24 +21,31 @@ class PickedUpload {
 Future<PickedUpload?> pickFileBytes(BuildContext context) async {
   final source = await showModalBottomSheet<String>(
     context: context,
-    builder: (context) => SafeArea(
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) => SheetScaffold(
+      title: 'Add file',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            leading: const Icon(Icons.folder_open_outlined),
-            title: const Text('From storage'),
+          _FileSourceTile(
+            icon: Icons.folder_open_outlined,
+            title: 'From storage',
             onTap: () => Navigator.of(context).pop('storage'),
           ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt_outlined),
-            title: const Text('Camera'),
+          const SizedBox(height: 8),
+          _FileSourceTile(
+            icon: Icons.camera_alt_outlined,
+            title: 'Camera',
             onTap: () => Navigator.of(context).pop('camera'),
           ),
-          ListTile(
-            leading: const Icon(Icons.close),
-            title: const Text('Cancel'),
-            onTap: () => Navigator.of(context).pop(),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
           ),
         ],
       ),
@@ -56,4 +65,37 @@ Future<PickedUpload?> pickFileBytes(BuildContext context) async {
     bytes: await picked.readAsBytes(),
     name: p.basename(picked.path),
   );
+}
+
+class _FileSourceTile extends StatelessWidget {
+  const _FileSourceTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: context.palette.accentText),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: context.palette.mutedText),
+        ],
+      ),
+    );
+  }
 }

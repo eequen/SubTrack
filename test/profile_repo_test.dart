@@ -117,8 +117,11 @@ void main() {
     expect(row.accentKey, 'indigo');
   });
 
-  test('the accent picker offers exactly the theme accents', () {
-    expect(profileAccentKeys, accentOptions.map((option) => option.key));
+  test('the accent picker only offers accepted profile accent keys', () {
+    expect(
+      profileAccentKeys,
+      containsAll(accentOptions.map((option) => option.key)),
+    );
     expect(profileAccentKeys, contains('pink'));
   });
 }

@@ -12,8 +12,10 @@ import 'package:subtrack/data/repositories/cloud_repo.dart';
 import 'package:subtrack/features/auth/auth_providers.dart';
 import 'package:subtrack/features/backup/backup_providers.dart';
 import 'package:subtrack/features/cloud/cloud_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
 import 'package:subtrack/features/profile/profile_providers.dart';
 import 'package:subtrack/features/semesters/semester_providers.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 /// Screen 10 from AGENTS.md section 14: Cloud backup.
 ///
@@ -109,6 +111,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
             'subtrack_last_cloud_backup',
             DateTime.now().toUtc().toIso8601String(),
           );
+      await ref.read(localBackupPendingProvider.notifier).markBackedUp();
       ref.invalidate(cloudUsageProvider);
       _snack('Backed up to the cloud.');
     } on CloudBackupCancelled {
@@ -157,6 +160,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
           'Semesters: ${contents.semesters} · '
           'Subjects: ${contents.subjects} · '
           'Activities: ${contents.activities} · '
+          'Lessons: ${contents.lessons} · '
           'Versions: ${contents.commits}\n\n'
           'This cannot be undone.',
         ),
@@ -201,6 +205,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
           );
       // The cloud brings its own semesters; the student chooses again.
       await ref.read(selectedSemesterProvider.notifier).select(null);
+      await ref.read(localBackupPendingProvider.notifier).markBackedUp();
       _snack('Restored from the cloud. Choose a semester to see it.');
     } on CloudBackupCancelled {
       _snack('Restore cancelled.');
@@ -256,7 +261,10 @@ class _CloudPageState extends ConsumerState<CloudPage> {
             'Semesters: ${contents.semesters} · '
             'Subjects: ${contents.subjects} · '
             'Activities: ${contents.activities} · '
-            'Versions: ${contents.commits}\n\n'
+            'Lessons: ${contents.lessons} · '
+            'Versions: ${contents.commits} · '
+            'Decks: ${contents.decks} (${contents.cards} cards) · '
+            'Calendar events: ${contents.calendarEvents}\n\n'
             'This cannot be undone.',
           ),
           actions: [
@@ -275,6 +283,7 @@ class _CloudPageState extends ConsumerState<CloudPage> {
       await repo.import(picked.bytes);
       // The backup brings its own semesters; the student chooses again.
       await ref.read(selectedSemesterProvider.notifier).select(null);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       _snack('Backup imported. Choose a semester to see it.');
     } on InvalidBackupException catch (e) {
       _snack(e.message);
@@ -287,10 +296,13 @@ class _CloudPageState extends ConsumerState<CloudPage> {
 
   @override
   Widget build(BuildContext context) {
-    final email = ref.watch(authControllerProvider)?.email ?? '';
+    final user = ref.watch(authControllerProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
     final settings = ref.watch(profileProvider).value;
     final usage = ref.watch(cloudUsageProvider);
+    final signedInAs = settings?.username.isNotEmpty == true
+        ? settings!.username
+        : (user?.username.isNotEmpty == true ? user!.username : user?.email);
     final lastRaw = prefs.getString('subtrack_last_cloud_backup');
     final lastBackup = lastRaw == null
         ? 'No backup yet.'
@@ -309,29 +321,45 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Signed in as $email',
+                  'Signed in as ${signedInAs ?? ''}',
                   style: TextStyle(color: context.palette.mutedText),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: context.palette.card,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.navy, AppColors.brandBlue],
+                    ),
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(color: context.palette.cardBorder),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.cardShadow,
+                        blurRadius: 20,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Back up to the cloud',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Uploads the latest version of every file and all your '
-                        'details to your private cloud storage.',
-                        style: TextStyle(color: context.palette.mutedText),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.cloud_outlined,
+                            color: context.palette.onAccent,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Cloud storage',
+                            style: TextStyle(
+                              color: context.palette.onAccent,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       usage.when(
@@ -340,68 +368,87 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                           children: [
                             LinearProgressIndicator(
                               value: (used / cloudQuotaBytes).clamp(0.0, 1.0),
+                              backgroundColor: context.palette.onAccent
+                                  .withValues(alpha: 0.25),
+                              valueColor: AlwaysStoppedAnimation(
+                                context.palette.onAccent,
+                              ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
                             Text(
-                              '${_mb(used)} / 100 MB used · $lastBackup',
+                              '${_mb(used)} / 100 MB',
                               style: TextStyle(
-                                color: context.palette.mutedText,
+                                color: context.palette.onAccent,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                              ),
+                            ),
+                            Text(
+                              lastBackup,
+                              style: TextStyle(
+                                color: context.palette.onAccent,
                                 fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                         loading: () => Text(
-                          'Checking cloud storage... · $lastBackup',
-                          style: TextStyle(
-                            color: context.palette.mutedText,
-                            fontSize: 12,
-                          ),
+                          'Checking cloud storage...\n$lastBackup',
+                          style: TextStyle(color: context.palette.onAccent),
                         ),
-                        error: (error, stack) => Text(
-                          'Could not check cloud storage. · $lastBackup',
-                          style: TextStyle(
-                            color: context.palette.mutedText,
-                            fontSize: 12,
-                          ),
+                        error: (_, _) => Text(
+                          'Could not check cloud storage.\n$lastBackup',
+                          style: TextStyle(color: context.palette.onAccent),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: _busy ? null : _backupNow,
-                        child: Text(
-                          _backingUp ? 'Backing up...' : 'Back up now',
-                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                PrimaryButton(
+                  label: _backingUp ? 'Backing up...' : 'Back up now',
+                  onPressed: _busy ? null : _backupNow,
+                ),
+                const SizedBox(height: 8),
+                SecondaryButton(
+                  label: _restoring ? 'Restoring...' : 'Restore from cloud',
+                  onPressed: _busy ? null : _restore,
+                ),
+                if (_backingUp || _restoring) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Expanded(child: LinearProgressIndicator()),
+                      TextButton(
+                        onPressed: () =>
+                            setState(() => _cancelRequested = true),
+                        child: const Text('Cancel'),
                       ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _busy ? null : _restore,
-                        child: Text(
-                          _restoring ? 'Restoring...' : 'Restore from cloud',
-                        ),
+                    ],
+                  ),
+                  if (_progressText != null)
+                    Text(
+                      _progressText!,
+                      style: TextStyle(
+                        color: context.palette.mutedText,
+                        fontSize: 12,
                       ),
-                      if (_backingUp || _restoring) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Expanded(child: LinearProgressIndicator()),
-                            TextButton(
-                              onPressed: () =>
-                                  setState(() => _cancelRequested = true),
-                              child: const Text('Cancel'),
-                            ),
-                          ],
-                        ),
-                        if (_progressText != null)
-                          Text(
-                            _progressText!,
-                            style: TextStyle(
-                              color: context.palette.mutedText,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                      const SizedBox(height: 8),
+                    ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  'Cloud backup is manual. Nothing uploads unless you tap '
+                  'Back up now.',
+                  style: TextStyle(
+                    color: context.palette.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AppCard(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    children: [
                       Row(
                         children: [
                           Checkbox(
@@ -456,43 +503,34 @@ class _CloudPageState extends ConsumerState<CloudPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: context.palette.card,
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(color: context.palette.cardBorder),
-                  ),
+                AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
                         'Local backup (.zip)',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Copies every subject, activity, file, and version '
-                        'into one .zip you can keep anywhere.',
+                        'Copies every subject, lesson, activity, flashcard '
+                        'deck, file, and version into one .zip you can keep '
+                        'anywhere.',
                         style: TextStyle(color: context.palette.mutedText),
                       ),
                       const SizedBox(height: 12),
-                      ElevatedButton(
+                      PrimaryButton(
+                        label: _exporting
+                            ? 'Exporting...'
+                            : 'Export local backup (.zip)',
                         onPressed: _exporting ? null : _export,
-                        child: Text(
-                          _exporting
-                              ? 'Exporting...'
-                              : 'Export local backup (.zip)',
-                        ),
                       ),
                       const SizedBox(height: 8),
-                      OutlinedButton(
+                      SecondaryButton(
+                        label: _importing
+                            ? 'Importing...'
+                            : 'Import local backup (.zip)',
                         onPressed: _importing ? null : _import,
-                        child: Text(
-                          _importing
-                              ? 'Importing...'
-                              : 'Import local backup (.zip)',
-                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(

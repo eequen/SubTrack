@@ -6,9 +6,14 @@ import 'package:open_filex/open_filex.dart';
 import 'package:subtrack/app/theme.dart';
 import 'package:subtrack/core/format.dart';
 import 'package:subtrack/data/db/app_database.dart';
+import 'package:subtrack/features/activities/activity_providers.dart';
 import 'package:subtrack/features/files/file_providers.dart';
+import 'package:subtrack/features/cloud/backup_status_provider.dart';
+import 'package:subtrack/features/reminders/reminder_providers.dart';
 import 'package:subtrack/shared/card_button.dart';
 import 'package:subtrack/shared/chips.dart';
+import 'package:subtrack/shared/finish_version_sheet.dart';
+import 'package:subtrack/shared/ui_components.dart';
 
 final _dateFormat = DateFormat('MMM d, y · h:mm a');
 
@@ -54,6 +59,47 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
     }
   }
 
+  Future<void> _finish(Commit commit) async {
+    final item = ref.read(fileItemProvider(_fileId)).value;
+    if (item == null) {
+      _snack('Could not find the activity for this version.');
+      return;
+    }
+    final activity = await ref
+        .read(activityRepoProvider)
+        .getById(item.file.activityId);
+    if (activity == null || !mounted) {
+      _snack('Could not find the activity for this version.');
+      return;
+    }
+
+    final result = await showFinishVersionSheet(
+      context,
+      versionNo: commit.versionNo,
+      fileName: item.file.displayName,
+      currentStatus: activity.status,
+    );
+    if (result == null || !mounted) return;
+    if (result == activity.status) {
+      _snack('v${commit.versionNo} is already ${statusLabel(result)}.');
+      return;
+    }
+    try {
+      await ref
+          .read(activityRepoProvider)
+          .updateDetails(id: activity.id, status: result);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
+      await ref.read(reminderServiceProvider).syncAll();
+      _snack(
+        result == finishVersionSubmitted
+            ? 'v${commit.versionNo} saved and submitted.'
+            : 'v${commit.versionNo} saved as final.',
+      );
+    } catch (e) {
+      _snack('Could not finish this version: $e');
+    }
+  }
+
   Future<void> _restore(Commit commit) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -80,6 +126,7 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
       await ref
           .read(commitRepoProvider)
           .restoreAsNewCommit(fileId: _fileId, fromCommitId: commit.id);
+      await ref.read(localBackupPendingProvider.notifier).markPending();
       _snack('Restored from v${commit.versionNo}.');
     } catch (e) {
       _snack('Could not restore: $e');
@@ -135,11 +182,16 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
               Expanded(
                 child: commits.when(
                   loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Could not load: $e')),
+                      const AppLoadingState(message: 'Loading versions...'),
+                  error: (e, _) =>
+                      AppErrorState(message: 'Could not load versions: $e'),
                   data: (list) {
                     if (list.isEmpty) {
-                      return const Center(child: Text('No versions yet.'));
+                      return const EmptyState(
+                        icon: Icons.history,
+                        title: 'No versions yet.',
+                        message: 'Commit a file to start its version history.',
+                      );
                     }
                     return ListView.separated(
                       itemCount: list.length,
@@ -156,6 +208,7 @@ class _VersionHistoryPageState extends ConsumerState<VersionHistoryPage> {
                             '/files/$_fileId/edit?commit=${commit.id}',
                           ),
                           onRestore: () => _restore(commit),
+                          onFinish: () => _finish(commit),
                         );
                       },
                     );
@@ -212,6 +265,7 @@ class _CommitCard extends StatelessWidget {
     required this.onOpen,
     required this.onEdit,
     required this.onRestore,
+    required this.onFinish,
   });
 
   final Commit commit;
@@ -219,50 +273,48 @@ class _CommitCard extends StatelessWidget {
   final VoidCallback? onOpen;
   final VoidCallback onEdit;
   final VoidCallback onRestore;
+  final VoidCallback onFinish;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    'v${commit.versionNo} - ${commit.message}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+    return AppCard(
+      borderColor: isCurrent ? context.palette.accentText : null,
+      onTap: isCurrent ? onFinish : null,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  'v${commit.versionNo} - ${commit.message}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
-                if (isCurrent) ...[
-                  const SizedBox(width: 8),
-                  const CurrentChip(),
-                ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${_dateFormat.format(commit.createdAt)}'
-              ' · ${formatBytes(commit.sizeBytes)}',
-              style: TextStyle(color: context.palette.mutedText, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                CardButton(label: 'Open', onPressed: onOpen),
-                const SizedBox(width: 8),
-                CardButton(label: 'Edit', onPressed: onEdit),
-                if (!isCurrent) ...[
-                  const SizedBox(width: 8),
-                  CardButton(label: 'Restore', onPressed: onRestore),
-                ],
-              ],
-            ),
-          ],
-        ),
+              ),
+              if (isCurrent) ...[const SizedBox(width: 8), const CurrentChip()],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${_dateFormat.format(commit.createdAt)}'
+            ' · ${formatBytes(commit.sizeBytes)}',
+            style: TextStyle(color: context.palette.mutedText, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              CardButton(label: 'Open', onPressed: onOpen),
+              CardButton(label: 'Edit', onPressed: onEdit),
+              if (isCurrent) CardButton(label: 'Finish', onPressed: onFinish),
+              if (!isCurrent)
+                CardButton(label: 'Restore', onPressed: onRestore),
+            ],
+          ),
+        ],
       ),
     );
   }
