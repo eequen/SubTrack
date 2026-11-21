@@ -13,6 +13,11 @@ version-control mental model, applied to coursework instead of code.
   out, hands it to the editor through a `FileProvider`, detects the change when
   the student returns, and saves it as the next version.
 
+> 📩 **Interested in collaborating on this project, or have questions about
+> it? Contact us at
+> [kentpatrickilao@gmail.com](mailto:kentpatrickilao@gmail.com)** — just send
+> an email and we'll get back to you.
+
 ## Download
 
 Grab the prebuilt app here — no Flutter or Android Studio needed:
